@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     # 财务API配置
     finance_api_base_url: str = Field("http://ailianhuan.xyz:8333", env="FINANCE_API_BASE_URL")
     finance_api_timeout: float = Field(30.0, env="FINANCE_API_TIMEOUT")
+    finance_data_endpoint: str = Field(
+        "http://ailianhuan.xyz:8333/financeDate/dataList",
+        env="FINANCE_DATA_ENDPOINT",
+    )
 
     # AI对话配置
     ai_chat_model: str = Field("gpt-4", env="AI_CHAT_MODEL")

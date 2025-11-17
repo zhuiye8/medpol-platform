@@ -2,16 +2,19 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
+from decimal import Decimal
 from typing import List, Optional
 
 from sqlalchemy import (
     JSON,
     Boolean,
+    Date,
     DateTime,
     Enum as SAEnum,
     ForeignKey,
     Integer,
+    Numeric,
     String,
     Text,
 )
@@ -148,3 +151,54 @@ class CrawlerJobRunORM(Base):
     error_message: Mapped[Optional[str]] = mapped_column(Text)
 
     job: Mapped["CrawlerJobORM"] = relationship(back_populates="runs")
+
+
+class FinanceSyncLogORM(TimestampMixin, Base):
+    """财务数据同步日志"""
+
+    __tablename__ = "finance_sync_logs"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    source: Mapped[str] = mapped_column(String(32), default="finance_api")
+    mode: Mapped[str] = mapped_column(String(32), default="full")
+    status: Mapped[str] = mapped_column(String(16), default="pending")
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    fetched_count: Mapped[int] = mapped_column(Integer, default=0)
+    inserted_count: Mapped[int] = mapped_column(Integer, default=0)
+    updated_count: Mapped[int] = mapped_column(Integer, default=0)
+    error_message: Mapped[Optional[str]] = mapped_column(Text)
+
+    records: Mapped[List["FinanceRecordORM"]] = relationship(
+        back_populates="sync_log", cascade="all, delete-orphan"
+    )
+
+
+class FinanceRecordORM(TimestampMixin, Base):
+    """财务数据明细"""
+
+    __tablename__ = "finance_records"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    sync_log_id: Mapped[Optional[str]] = mapped_column(
+        String(64), ForeignKey("finance_sync_logs.id", ondelete="SET NULL")
+    )
+    keep_date: Mapped[date] = mapped_column(Date(), nullable=False)
+    type_no: Mapped[str] = mapped_column(String(8), nullable=False)
+    type_name: Mapped[Optional[str]] = mapped_column(String(64))
+    company_no: Mapped[str] = mapped_column(String(64), nullable=False)
+    company_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    company_name: Mapped[Optional[str]] = mapped_column(String(128))
+    high_company_no: Mapped[Optional[str]] = mapped_column(String(64))
+    level: Mapped[Optional[str]] = mapped_column(String(16))
+    current_amount: Mapped[Optional[Decimal]] = mapped_column(Numeric(20, 4))
+    last_year_amount: Mapped[Optional[Decimal]] = mapped_column(Numeric(20, 4))
+    last_year_total_amount: Mapped[Optional[Decimal]] = mapped_column(Numeric(20, 4))
+    this_year_total_amount: Mapped[Optional[Decimal]] = mapped_column(Numeric(20, 4))
+    add_amount: Mapped[Optional[Decimal]] = mapped_column(Numeric(20, 4))
+    add_rate: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 4))
+    year_add_amount: Mapped[Optional[Decimal]] = mapped_column(Numeric(20, 4))
+    year_add_rate: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 4))
+    raw_payload: Mapped[dict] = mapped_column(JSON, default=dict)
+
+    sync_log: Mapped[Optional["FinanceSyncLogORM"]] = relationship(back_populates="records")

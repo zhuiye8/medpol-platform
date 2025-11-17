@@ -164,3 +164,29 @@ class CrawlerJobRepository:
 
     def get_run(self, run_id: str) -> Optional[models.CrawlerJobRunORM]:
         return self.session.get(models.CrawlerJobRunORM, run_id)
+
+
+class FinanceRecordRepository:
+    """财务数据仓储"""
+
+    def __init__(self, session: Session) -> None:
+        self.session = session
+
+    def get(self, record_id: str) -> Optional[models.FinanceRecordORM]:
+        return self.session.get(models.FinanceRecordORM, record_id)
+
+    def add(self, record: models.FinanceRecordORM) -> None:
+        self.session.add(record)
+
+
+class FinanceSyncLogRepository:
+    """财务同步日志仓储"""
+
+    def __init__(self, session: Session) -> None:
+        self.session = session
+
+    def get(self, log_id: str) -> Optional[models.FinanceSyncLogORM]:
+        return self.session.get(models.FinanceSyncLogORM, log_id)
+
+    def add(self, log: models.FinanceSyncLogORM) -> None:
+        self.session.add(log)

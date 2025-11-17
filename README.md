@@ -56,6 +56,7 @@
 5. **分发 / 调度辅助脚本**  
    - `python scripts/run_distribution.py`：将 formatter 结果写入缓存 / webhook stub  
    - `python scripts/run_scheduler.py`：轮询数据库中的 `crawler_jobs` 执行计划任务  
+   - `python scripts/sync_finance_data.py --month 2024-09`：从 `financeDate/dataList` 拉取财务数据写入本地（不传 `--month` 则全量）  
    - `python scripts/reset_data.py`：清空数据（需配置 `DATABASE_URL` + `REDIS_URL`）
 
 ## 测试
