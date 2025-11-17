@@ -18,6 +18,7 @@ article_category_enum = sa.Enum(
     "ema_policy",
     "pmda_policy",
     "project_apply",
+    "domestic_policy",
     name="article_category",
 )
 
