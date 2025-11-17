@@ -1,0 +1,1991 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "\u93c1\u7248\u5d41\u9352\u55d8\u703d\u93ba\u30e5\u5f5b\u93c2\u56e8\u3002",
+        "version": "\u9417\u581f\u6e701.0",
+        "title": "\u93c1\u7248\u5d41\u9352\u55d8\u703d",
+        "termsOfService": "urn:tos",
+        "contact": {
+            "name": "\u93c1\u7248\u5d41\u9352\u55d8\u703d",
+            "email": "2456068806@qq.com"
+        },
+        "license": {
+            "name": "Apache 2.0",
+            "url": "http://www.apache.org/licenses/LICENSE-2.0"
+        }
+    },
+    "host": "ailianhuan.xyz:8333",
+    "basePath": "/",
+    "tags": [
+        {
+            "name": "\u9422\u3126\u57db\u7ee0\uff04\u608a",
+            "description": "User Manage Controller"
+        },
+        {
+            "name": "basic-controller",
+            "description": "\u5a34\u5b2d\u762f\u59af\u2033\u6f61"
+        },
+        {
+            "name": "\u93b6\u30e8\u3003\u93c1\u7248\u5d41",
+            "description": "Finance Controller"
+        },
+        {
+            "name": "\u6d5c\u0443\u6427\u9359\u62cc\u5904",
+            "description": "Product Ledger Controller"
+        },
+        {
+            "name": "\u93b8\u56e8\u7223\u9470\u51a9\u7273",
+            "description": "Assessment Indicators Controller"
+        },
+        {
+            "name": "\u7490\u3220\u59df\u93c1\u7248\u5d41\u7ee0\uff04\u608a",
+            "description": "Finance Date Manage Controller"
+        },
+        {
+            "name": "\u6d5c\u0443\u6427\u9359\u62cc\u5904\u7ee0\uff04\u608a",
+            "description": "Product Ledger Manage Controller"
+        },
+        {
+            "name": "\u934f\udcac\u9359\u9550\u4fca\u93ad\udcaf",
+            "description": "Company Controller"
+        },
+        {
+            "name": "\u9422\u3126\u57db\u9427\u8bf2\u7d8d",
+            "description": "Login Controller"
+        }
+    ],
+    "paths": {
+        "/assessmentIndicators/selectAssessmentIndicators": {
+            "post": {
+                "tags": [
+                    "\u93b8\u56e8\u7223\u9470\u51a9\u7273"
+                ],
+                "summary": "\u93cc\u30e8\udcaf\u3221\u5bda\u93cd\u56ea\udc80\u51a9\u7273\u934f\udcac\u9359\u544a\u669f\u93b9\udcae",
+                "operationId": "selectCompanyUsingPOST",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "*/*"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "assessmentIndicatorsCondition",
+                        "description": "assessmentIndicatorsCondition",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/AssessmentIndicatorsCondition"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/AssessmentIndicatorsCondition"
+                        }
+                    },
+                    "201": {
+                        "description": "Created"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    }
+                }
+            }
+        },
+        "/assessmentIndicators/selectTarget": {
+            "post": {
+                "tags": [
+                    "\u93b8\u56e8\u7223\u9470\u51a9\u7273"
+                ],
+                "summary": "\u93cd\u89c4\u5d41\u934f\udcac\u9359\u54e5\u7d2a\u9359\u950b\u7161\u7487\u3221\u7161\u7487\u3221\u5bda\u93cd\u56ea\udc80\u51a9\u7273\u93c1\u7248\u5d41",
+                "operationId": "selectTargetUsingPOST",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "*/*"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "assessmentIndicatorsCondition",
+                        "description": "assessmentIndicatorsCondition",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/AssessmentIndicatorsCondition"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/AssessmentIndicatorsCondition"
+                        }
+                    },
+                    "201": {
+                        "description": "Created"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    }
+                }
+            }
+        },
+        "/ceshi/hello": {
+            "get": {
+                "tags": [
+                    "basic-controller"
+                ],
+                "summary": "\u5a34\u5b2d\u762fhello",
+                "operationId": "helloUsingGET",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "*/*"
+                ],
+                "parameters": [
+                    {
+                        "name": "name",
+                        "in": "query",
+                        "description": "name",
+                        "required": false,
+                        "type": "string",
+                        "default": "unknown user"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/\u9422\u3126\u57db\u7eeb\udcbb"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    }
+                }
+            }
+        },
+        "/company/insertCompany": {
+            "post": {
+                "tags": [
+                    "\u934f\udcac\u9359\u9550\u4fca\u93ad\udcaf"
+                ],
+                "summary": "\u93c2\u677f\udca2\u70b2\u53d5\u9359\u544a\u669f\u93b9\udcae",
+                "operationId": "insertFinanceDateUsingPOST",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "*/*"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "companyList",
+                        "description": "companyList",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/\u934f\udcac\u9359\u9550\u4fca\u93ad\udcaf"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "201": {
+                        "description": "Created"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    }
+                }
+            }
+        },
+        "/company/selectCompany": {
+            "post": {
+                "tags": [
+                    "\u934f\udcac\u9359\u9550\u4fca\u93ad\udcaf"
+                ],
+                "summary": "\u93cc\u30e8\udcaf\u3220\u53d5\u9359\u544a\u669f\u93b9\udcae",
+                "operationId": "selectCompanyUsingPOST_1",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "*/*"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "company",
+                        "description": "company",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/CompanyCondition"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/CompanyCondition"
+                        }
+                    },
+                    "201": {
+                        "description": "Created"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    }
+                }
+            }
+        },
+        "/finance/getFinanceDate": {
+            "post": {
+                "tags": [
+                    "\u93b6\u30e8\u3003\u93c1\u7248\u5d41"
+                ],
+                "summary": "\u93cd\u89c4\u5d41\u7eeb\u8bf2\u7037\u947e\u5cf0\u5f47\u93b6\u30e8\u3003\u93c1\u7248\u5d41",
+                "operationId": "getFinanceDateUsingPOST",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "*/*"
+                ],
+                "parameters": [
+                    {
+                        "name": "financeType",
+                        "in": "query",
+                        "description": "financeType",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "name": "keepDate",
+                        "in": "query",
+                        "description": "keepDate",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "name": "companyNo",
+                        "in": "query",
+                        "description": "companyNo",
+                        "required": false,
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "multi"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "201": {
+                        "description": "Created"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    }
+                }
+            }
+        },
+        "/finance/getFinanceDateCompare": {
+            "post": {
+                "tags": [
+                    "\u93b6\u30e8\u3003\u93c1\u7248\u5d41"
+                ],
+                "summary": "\u947e\u5cf0\u5f47\u93c1\u7248\u5d41\u9352\u55d8\u703d\u93c1\u7248\u5d41",
+                "operationId": "getFinanceDateCompareUsingPOST",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "*/*"
+                ],
+                "parameters": [
+                    {
+                        "name": "compareType",
+                        "in": "query",
+                        "description": "compareType",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "name": "companyNos",
+                        "in": "query",
+                        "description": "companyNos",
+                        "required": true,
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "multi"
+                    },
+                    {
+                        "name": "year",
+                        "in": "query",
+                        "description": "year",
+                        "required": true,
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "multi"
+                    },
+                    {
+                        "name": "month",
+                        "in": "query",
+                        "description": "month",
+                        "required": true,
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "multi"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "201": {
+                        "description": "Created"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    }
+                }
+            }
+        },
+        "/finance/getFinanceDateGraph": {
+            "post": {
+                "tags": [
+                    "\u93b6\u30e8\u3003\u93c1\u7248\u5d41"
+                ],
+                "summary": "\u93cd\u89c4\u5d41\u7eeb\u8bf2\u7037\u947e\u5cf0\u5f47\u93b6\u30e8\u3003\u9365\u60e7\u8230\u93c1\u7248\u5d41",
+                "operationId": "getFinanceDateGraphUsingPOST",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "*/*"
+                ],
+                "parameters": [
+                    {
+                        "name": "financeType",
+                        "in": "query",
+                        "description": "financeType",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "name": "keepDate",
+                        "in": "query",
+                        "description": "keepDate",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "201": {
+                        "description": "Created"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    }
+                }
+            }
+        },
+        "/finance/getFinanceType": {
+            "post": {
+                "tags": [
+                    "\u93b6\u30e8\u3003\u93c1\u7248\u5d41"
+                ],
+                "summary": "\u947e\u5cf0\u5f47\u93b6\u30e8\u3003\u9352\u6944\u3003",
+                "operationId": "getFinanceTypeUsingPOST",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "*/*"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/IResponse"
+                        }
+                    },
+                    "201": {
+                        "description": "Created"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    }
+                }
+            }
+        },
+        "/finance/insertFinanceDate": {
+            "post": {
+                "tags": [
+                    "\u93b6\u30e8\u3003\u93c1\u7248\u5d41"
+                ],
+                "summary": "\u93c2\u677f\udca2\u70b4\u59e4\u741b\u3126\u669f\u93b9\udcae",
+                "operationId": "insertFinanceDateUsingPOST_1",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "*/*"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "financeTypeList",
+                        "description": "financeTypeList",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/\u93b6\u30e8\u3003\u7eeb\u8bf2\u57c6\u9352\u6944\u3003"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "201": {
+                        "description": "Created"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    }
+                }
+            }
+        },
+        "/finance/insertFinanceType": {
+            "post": {
+                "tags": [
+                    "\u93b6\u30e8\u3003\u93c1\u7248\u5d41"
+                ],
+                "summary": "\u93c2\u677f\udca2\u70b4\u59e4\u741b\u3125\u57aa\u741b\udca8",
+                "operationId": "insertFinanceTypeUsingPOST",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "*/*"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "financeTypeList",
+                        "description": "financeTypeList",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/\u93b6\u30e8\u3003\u7eeb\u8bf2\u57c6\u9352\u6944\u3003"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/\u93b6\u30e8\u3003\u7eeb\u8bf2\u57c6\u9352\u6944\u3003"
+                        }
+                    },
+                    "201": {
+                        "description": "Created"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    }
+                }
+            }
+        },
+        "/financeDate/add": {
+            "post": {
+                "tags": [
+                    "\u7490\u3220\u59df\u93c1\u7248\u5d41\u7ee0\uff04\u608a"
+                ],
+                "summary": "\u93c2\u677f\udca2\u70b6\u50a8\u9354\u2103\u669f\u93b9\udcae",
+                "operationId": "addFinanceDateUsingPOST",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "*/*"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "financeDate",
+                        "description": "financeDate",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/\u93b6\u30e8\u3003\u93c1\u7248\u5d41\u741b\udca8"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/IResponse"
+                        }
+                    },
+                    "201": {
+                        "description": "Created"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    }
+                }
+            }
+        },
+        "/financeDate/dataList": {
+            "post": {
+                "tags": [
+                    "\u7490\u3220\u59df\u93c1\u7248\u5d41\u7ee0\uff04\u608a"
+                ],
+                "summary": "\u947e\u5cf0\u5f47\u7490\u3220\u59df\u934f\u3129\u567a\u93c1\u7248\u5d41\u93c1\u7248\u5d41",
+                "operationId": "getDataUsingPOST",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "*/*"
+                ],
+                "parameters": [
+                    {
+                        "name": "keepDate",
+                        "in": "query",
+                        "description": "keepDate",
+                        "required": false,
+                        "type": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/IResponse\u82a6List\u82a6\u93b6\u30e8\u3003\u93c1\u7248\u5d41\u741b\udca8\u7984\u7984"
+                        }
+                    },
+                    "201": {
+                        "description": "Created"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    }
+                }
+            }
+        },
+        "/financeDate/delete/{id}": {
+            "delete": {
+                "tags": [
+                    "\u7490\u3220\u59df\u93c1\u7248\u5d41\u7ee0\uff04\u608a"
+                ],
+                "summary": "\u9352\u72bb\u6ace\u7490\u3220\u59df\u93c1\u7248\u5d41",
+                "operationId": "deleteFinanceDateUsingDELETE",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "*/*"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "id",
+                        "required": true,
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/IResponse"
+                        }
+                    },
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    }
+                }
+            }
+        },
+        "/financeDate/get/{id}": {
+            "get": {
+                "tags": [
+                    "\u7490\u3220\u59df\u93c1\u7248\u5d41\u7ee0\uff04\u608a"
+                ],
+                "summary": "\u947e\u5cf0\u5f47\u7490\u3220\u59df\u93c1\u7248\u5d41\u7487\ufe3d\u510f",
+                "operationId": "getFinanceDateByIdUsingGET",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "*/*"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "id",
+                        "required": true,
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/IResponse\u82a6\u93b6\u30e8\u3003\u93c1\u7248\u5d41\u741b\udca8\u7984"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    }
+                }
+            }
+        },
+        "/financeDate/list": {
+            "get": {
+                "tags": [
+                    "\u7490\u3220\u59df\u93c1\u7248\u5d41\u7ee0\uff04\u608a"
+                ],
+                "summary": "\u9352\u55db\u3009\u93cc\u30e8\udcaf\u3223\u50a8\u9354\u2103\u669f\u93b9\udcae\u9352\u6944\u3003",
+                "operationId": "getFinanceDateListUsingGET",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "*/*"
+                ],
+                "parameters": [
+                    {
+                        "name": "pageIndex",
+                        "in": "query",
+                        "description": "pageIndex",
+                        "required": false,
+                        "type": "integer",
+                        "default": 1,
+                        "format": "int32"
+                    },
+                    {
+                        "name": "pageSize",
+                        "in": "query",
+                        "description": "pageSize",
+                        "required": false,
+                        "type": "integer",
+                        "default": 10,
+                        "format": "int32"
+                    },
+                    {
+                        "name": "companyNo",
+                        "in": "query",
+                        "description": "companyNo",
+                        "required": false,
+                        "type": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/IResponse\u82a6IPage\u82a6\u93b6\u30e8\u3003\u93c1\u7248\u5d41\u741b\udca8\u7984\u7984"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    }
+                }
+            }
+        },
+        "/financeDate/update": {
+            "put": {
+                "tags": [
+                    "\u7490\u3220\u59df\u93c1\u7248\u5d41\u7ee0\uff04\u608a"
+                ],
+                "summary": "\u93c7\u5b58\u67ca\u7490\u3220\u59df\u93c1\u7248\u5d41",
+                "operationId": "updateFinanceDateUsingPUT",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "*/*"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "financeDate",
+                        "description": "financeDate",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/\u93b6\u30e8\u3003\u93c1\u7248\u5d41\u741b\udca8"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/IResponse"
+                        }
+                    },
+                    "201": {
+                        "description": "Created"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    }
+                }
+            }
+        },
+        "/ledger/getLedgerList": {
+            "post": {
+                "tags": [
+                    "\u6d5c\u0443\u6427\u9359\u62cc\u5904"
+                ],
+                "summary": "\u947e\u5cf0\u5f47\u6d5c\u0443\u6427\u9359\u62cc\u5904\u9352\u6944\u3003",
+                "operationId": "getLedgerListUsingPOST",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "*/*"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "condition",
+                        "description": "condition",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/AssessmentIndicatorsCondition"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/IResponse\u82a6object\u7984"
+                        }
+                    },
+                    "201": {
+                        "description": "Created"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    }
+                }
+            }
+        },
+        "/login/insertUser": {
+            "post": {
+                "tags": [
+                    "\u9422\u3126\u57db\u9427\u8bf2\u7d8d"
+                ],
+                "summary": "\u93c2\u677f\udca2\u70b5\u6564\u93b4\udcb7",
+                "operationId": "insertUserUsingPOST",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "*/*"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "request",
+                        "description": "request",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/\u9422\u3126\u57db\u7eeb\udcbb"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/\u9422\u3126\u57db\u7eeb\udcbb"
+                        }
+                    },
+                    "201": {
+                        "description": "Created"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    }
+                }
+            }
+        },
+        "/login/login": {
+            "post": {
+                "tags": [
+                    "\u9422\u3126\u57db\u9427\u8bf2\u7d8d"
+                ],
+                "summary": "\u9427\u8bf2\u7d8d\u93ba\u30e5\u5f5b",
+                "operationId": "loginUsingPOST",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "*/*"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "request",
+                        "description": "request",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/\u9422\u3126\u57db\u7eeb\udcbb"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/\u9422\u3126\u57db\u7eeb\udcbb"
+                        }
+                    },
+                    "201": {
+                        "description": "Created"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    }
+                }
+            }
+        },
+        "/productLedger/add": {
+            "post": {
+                "tags": [
+                    "\u6d5c\u0443\u6427\u9359\u62cc\u5904\u7ee0\uff04\u608a"
+                ],
+                "summary": "\u93c2\u677f\udca2\u70b2\u5f74\u7490\ufe3d\u669f\u93b9\udcae",
+                "operationId": "addProductLedgerUsingPOST",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "*/*"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "productLedger",
+                        "description": "productLedger",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ProductLedger"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/IResponse"
+                        }
+                    },
+                    "201": {
+                        "description": "Created"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    }
+                }
+            }
+        },
+        "/productLedger/delete/{id}": {
+            "delete": {
+                "tags": [
+                    "\u6d5c\u0443\u6427\u9359\u62cc\u5904\u7ee0\uff04\u608a"
+                ],
+                "summary": "\u9352\u72bb\u6ace\u9359\u62cc\u5904\u93c1\u7248\u5d41",
+                "operationId": "deleteProductLedgerUsingDELETE",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "*/*"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "id",
+                        "required": true,
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/IResponse"
+                        }
+                    },
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    }
+                }
+            }
+        },
+        "/productLedger/get/{id}": {
+            "get": {
+                "tags": [
+                    "\u6d5c\u0443\u6427\u9359\u62cc\u5904\u7ee0\uff04\u608a"
+                ],
+                "summary": "\u947e\u5cf0\u5f47\u9359\u62cc\u5904\u7487\ufe3d\u510f",
+                "operationId": "getProductLedgerByIdUsingGET",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "*/*"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "id",
+                        "required": true,
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/IResponse\u82a6ProductLedger\u7984"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    }
+                }
+            }
+        },
+        "/productLedger/list": {
+            "get": {
+                "tags": [
+                    "\u6d5c\u0443\u6427\u9359\u62cc\u5904\u7ee0\uff04\u608a"
+                ],
+                "summary": "\u9352\u55db\u3009\u93cc\u30e8\udcaf\u3220\u5f74\u7490\ufe40\u57aa\u741b\udca8",
+                "operationId": "getProductLedgerListUsingGET",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "*/*"
+                ],
+                "parameters": [
+                    {
+                        "name": "pageIndex",
+                        "in": "query",
+                        "description": "pageIndex",
+                        "required": false,
+                        "type": "integer",
+                        "default": 1,
+                        "format": "int32"
+                    },
+                    {
+                        "name": "pageSize",
+                        "in": "query",
+                        "description": "pageSize",
+                        "required": false,
+                        "type": "integer",
+                        "default": 10,
+                        "format": "int32"
+                    },
+                    {
+                        "name": "productName",
+                        "in": "query",
+                        "description": "productName",
+                        "required": false,
+                        "type": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/IResponse\u82a6IPage\u82a6ProductLedger\u7984\u7984"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    }
+                }
+            }
+        },
+        "/productLedger/update": {
+            "put": {
+                "tags": [
+                    "\u6d5c\u0443\u6427\u9359\u62cc\u5904\u7ee0\uff04\u608a"
+                ],
+                "summary": "\u93c7\u5b58\u67ca\u9359\u62cc\u5904\u93c1\u7248\u5d41",
+                "operationId": "updateProductLedgerUsingPUT",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "*/*"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "productLedger",
+                        "description": "productLedger",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ProductLedger"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/IResponse"
+                        }
+                    },
+                    "201": {
+                        "description": "Created"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    }
+                }
+            }
+        },
+        "/user/add": {
+            "post": {
+                "tags": [
+                    "\u9422\u3126\u57db\u7ee0\uff04\u608a"
+                ],
+                "summary": "\u93c2\u677f\udca2\u70b5\u6564\u93b4\udcb7",
+                "operationId": "addUserUsingPOST",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "*/*"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "user",
+                        "description": "user",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/\u9422\u3126\u57db\u7eeb\udcbb"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/IResponse"
+                        }
+                    },
+                    "201": {
+                        "description": "Created"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    }
+                }
+            }
+        },
+        "/user/delete/{id}": {
+            "delete": {
+                "tags": [
+                    "\u9422\u3126\u57db\u7ee0\uff04\u608a"
+                ],
+                "summary": "\u9352\u72bb\u6ace\u9422\u3126\u57db",
+                "operationId": "deleteUserUsingDELETE",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "*/*"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "id",
+                        "required": true,
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/IResponse"
+                        }
+                    },
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    }
+                }
+            }
+        },
+        "/user/get/{id}": {
+            "get": {
+                "tags": [
+                    "\u9422\u3126\u57db\u7ee0\uff04\u608a"
+                ],
+                "summary": "\u947e\u5cf0\u5f47\u9422\u3126\u57db\u7487\ufe3d\u510f",
+                "operationId": "getUserByIdUsingGET",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "*/*"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "id",
+                        "required": true,
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/IResponse\u82a6\u9422\u3126\u57db\u7eeb\u5ba6\udcbb"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    }
+                }
+            }
+        },
+        "/user/list": {
+            "get": {
+                "tags": [
+                    "\u9422\u3126\u57db\u7ee0\uff04\u608a"
+                ],
+                "summary": "\u9352\u55db\u3009\u93cc\u30e8\udcaf\u3222\u6564\u93b4\u5cf0\u57aa\u741b\udca8",
+                "operationId": "getUserListUsingGET",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "*/*"
+                ],
+                "parameters": [
+                    {
+                        "name": "pageIndex",
+                        "in": "query",
+                        "description": "pageIndex",
+                        "required": false,
+                        "type": "integer",
+                        "default": 1,
+                        "format": "int32"
+                    },
+                    {
+                        "name": "pageSize",
+                        "in": "query",
+                        "description": "pageSize",
+                        "required": false,
+                        "type": "integer",
+                        "default": 10,
+                        "format": "int32"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/IResponse\u82a6IPage\u82a6\u9422\u3126\u57db\u7eeb\u5ba6\u5ba6\udcbb"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    }
+                }
+            }
+        },
+        "/user/update": {
+            "put": {
+                "tags": [
+                    "\u9422\u3126\u57db\u7ee0\uff04\u608a"
+                ],
+                "summary": "\u93c7\u5b58\u67ca\u9422\u3126\u57db",
+                "operationId": "updateUserUsingPUT",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "*/*"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "user",
+                        "description": "user",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/\u9422\u3126\u57db\u7eeb\udcbb"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/IResponse"
+                        }
+                    },
+                    "201": {
+                        "description": "Created"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "AssessmentIndicatorsCondition": {
+            "type": "object",
+            "properties": {
+                "companyNo": {
+                    "type": "string",
+                    "description": "\u93cc\u30e8\udcaf\u3223\udc80\u51a9\u7273\u93b8\u56e8\u7223\u934f\udcac\u9359\u6b4c\udcaf\ufe3d\u510f\u93c1\u7248\u5d41\u6d63\u8de8\u6564"
+                },
+                "keepDate": {
+                    "type": "string"
+                },
+                "pageIndex": {
+                    "type": "integer",
+                    "format": "int32"
+                },
+                "pageSize": {
+                    "type": "integer",
+                    "format": "int32"
+                }
+            }
+        },
+        "CompanyCondition": {
+            "type": "object",
+            "properties": {
+                "companyName": {
+                    "type": "string"
+                },
+                "companyNo": {
+                    "type": "string"
+                },
+                "highCompanyNo": {
+                    "type": "string"
+                },
+                "level": {
+                    "type": "string"
+                },
+                "pageIndex": {
+                    "type": "integer",
+                    "format": "int32"
+                },
+                "pageSize": {
+                    "type": "integer",
+                    "format": "int32"
+                }
+            }
+        },
+        "IPage\u82a6ProductLedger\u7984": {
+            "type": "object",
+            "properties": {
+                "current": {
+                    "type": "integer",
+                    "format": "int64"
+                },
+                "pages": {
+                    "type": "integer",
+                    "format": "int64"
+                },
+                "records": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ProductLedger"
+                    }
+                },
+                "size": {
+                    "type": "integer",
+                    "format": "int64"
+                },
+                "total": {
+                    "type": "integer",
+                    "format": "int64"
+                }
+            }
+        },
+        "IPage\u82a6\u93b6\u30e8\u3003\u93c1\u7248\u5d41\u741b\udca8\u7984": {
+            "type": "object",
+            "properties": {
+                "current": {
+                    "type": "integer",
+                    "format": "int64"
+                },
+                "pages": {
+                    "type": "integer",
+                    "format": "int64"
+                },
+                "records": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/\u93b6\u30e8\u3003\u93c1\u7248\u5d41\u741b\udca8"
+                    }
+                },
+                "size": {
+                    "type": "integer",
+                    "format": "int64"
+                },
+                "total": {
+                    "type": "integer",
+                    "format": "int64"
+                }
+            }
+        },
+        "IPage\u82a6\u9422\u3126\u57db\u7eeb\u5ba6\udcbb": {
+            "type": "object",
+            "properties": {
+                "current": {
+                    "type": "integer",
+                    "format": "int64"
+                },
+                "pages": {
+                    "type": "integer",
+                    "format": "int64"
+                },
+                "records": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/\u9422\u3126\u57db\u7eeb\udcbb"
+                    }
+                },
+                "size": {
+                    "type": "integer",
+                    "format": "int64"
+                },
+                "total": {
+                    "type": "integer",
+                    "format": "int64"
+                }
+            }
+        },
+        "IResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "data": {
+                    "type": "object"
+                },
+                "msg": {
+                    "type": "string"
+                }
+            }
+        },
+        "IResponse\u82a6IPage\u82a6ProductLedger\u7984\u7984": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "data": {
+                    "$ref": "#/definitions/IPage\u82a6ProductLedger\u7984"
+                },
+                "msg": {
+                    "type": "string"
+                }
+            }
+        },
+        "IResponse\u82a6IPage\u82a6\u93b6\u30e8\u3003\u93c1\u7248\u5d41\u741b\udca8\u7984\u7984": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "data": {
+                    "$ref": "#/definitions/IPage\u82a6\u93b6\u30e8\u3003\u93c1\u7248\u5d41\u741b\udca8\u7984"
+                },
+                "msg": {
+                    "type": "string"
+                }
+            }
+        },
+        "IResponse\u82a6IPage\u82a6\u9422\u3126\u57db\u7eeb\u5ba6\u5ba6\udcbb": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "data": {
+                    "$ref": "#/definitions/IPage\u82a6\u9422\u3126\u57db\u7eeb\u5ba6\udcbb"
+                },
+                "msg": {
+                    "type": "string"
+                }
+            }
+        },
+        "IResponse\u82a6List\u82a6\u93b6\u30e8\u3003\u93c1\u7248\u5d41\u741b\udca8\u7984\u7984": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/\u93b6\u30e8\u3003\u93c1\u7248\u5d41\u741b\udca8"
+                    }
+                },
+                "msg": {
+                    "type": "string"
+                }
+            }
+        },
+        "IResponse\u82a6ProductLedger\u7984": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "data": {
+                    "$ref": "#/definitions/ProductLedger"
+                },
+                "msg": {
+                    "type": "string"
+                }
+            }
+        },
+        "IResponse\u82a6object\u7984": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "data": {
+                    "type": "object"
+                },
+                "msg": {
+                    "type": "string"
+                }
+            }
+        },
+        "IResponse\u82a6\u93b6\u30e8\u3003\u93c1\u7248\u5d41\u741b\udca8\u7984": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "data": {
+                    "$ref": "#/definitions/\u93b6\u30e8\u3003\u93c1\u7248\u5d41\u741b\udca8"
+                },
+                "msg": {
+                    "type": "string"
+                }
+            }
+        },
+        "IResponse\u82a6\u9422\u3126\u57db\u7eeb\u5ba6\udcbb": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "data": {
+                    "$ref": "#/definitions/\u9422\u3126\u57db\u7eeb\udcbb"
+                },
+                "msg": {
+                    "type": "string"
+                }
+            }
+        },
+        "ProductLedger": {
+            "type": "object",
+            "properties": {
+                "applicationField": {
+                    "type": "string",
+                    "description": "\u6434\u65c2\u6564\u68f0\u55d7\u7159"
+                },
+                "approvalDate": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "\u93b5\u901b\u6b22\u93c3\u30e6\u6e61\u951b\u5822\u7ca8\u68f0\u6a3b\u68e9\u93c8\u71c2\u7d1a"
+                },
+                "approvalNumber": {
+                    "type": "string",
+                    "description": "\u93b5\u7470\u566f\u93c2\u56e7\u5f7f"
+                },
+                "companyId": {
+                    "type": "integer",
+                    "format": "int64",
+                    "description": "\u934f\udcac\u9359\u7ad4d"
+                },
+                "companyName": {
+                    "type": "string",
+                    "description": "\u675e\udcac\u9356\u6827\u53d5\u9359\udcb8"
+                },
+                "companyNo": {
+                    "type": "string",
+                    "description": "\u934f\udcac\u9359\u54e5\u7d2a\u9359\udcb7"
+                },
+                "firstSalesAmount": {
+                    "type": "string",
+                    "description": "\u68e3\u6828\udcac\uffe0\u6522\u935e\udcae\u951b\u5823\u6363\u6fee\u5b2b\u6e40\u951b\u5c84\u6522\u935e\udcae\u68f0\u6fd3\u7d1a"
+                },
+                "id": {
+                    "type": "integer",
+                    "format": "int64"
+                },
+                "produceWorkshop": {
+                    "type": "string",
+                    "description": "\u9422\u71b6\u9a87\u675e\ufe42\u68ff"
+                },
+                "productName": {
+                    "type": "string",
+                    "description": "\u6d5c\u0443\u6427\u935a\u5d87\u041e"
+                },
+                "productionStatus": {
+                    "type": "string",
+                    "description": "\u93b6\u66da\u9a87\u93af\u546d\u558c\u951b\u581f\u5e13\u6d5c\u0441\udc80\u4f79\u58d2\u95b2\u5fd4\u510f\u9350\u7889\u7d1a"
+                },
+                "salesAmount": {
+                    "type": "string",
+                    "description": "\u95bf\udc80\u935e\udcae\u95b2\u6226\udca2\u6fd3\u7d19\u93c8\u581d\u5bb3\u9286\u4f78\udcad\uff45\u5bb3\u951b\udc89"
+                },
+                "salesNumber": {
+                    "type": "string",
+                    "description": "\u95bf\udc80\u935e\udcae\u93c1\u4f34\u567a\u951b\u581f\u6e40\u6434\ufe3a\udc80\u4f78\udcad\uff45\u5bb3\u951b\udc89"
+                },
+                "totalAmount": {
+                    "type": "string",
+                    "description": "\u7ef1\udcaf\u7481\uffe0\u6522\u935e\udcae\u68f0\udc9d"
+                },
+                "transformationDate": {
+                    "type": "string",
+                    "description": "\u675e\udcac\u9356\u6828\u6902\u95c2\udcb4"
+                },
+                "yearSalesAmount": {
+                    "type": "string",
+                    "description": "\u9a9e\u6751\u5bb3\u93ac\u5a5a\u6522\u935e\udcae\u68f0\udc9d"
+                }
+            }
+        },
+        "\u934f\udcac\u9359\u9550\u4fca\u93ad\udcaf": {
+            "type": "object",
+            "properties": {
+                "companyAddress": {
+                    "type": "string"
+                },
+                "companyName": {
+                    "type": "string"
+                },
+                "companyNo": {
+                    "type": "string"
+                },
+                "highCompanyId": {
+                    "type": "integer",
+                    "format": "int64"
+                },
+                "highCompanyNo": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer",
+                    "format": "int64",
+                    "description": "\u935e\udcaf\u6d93\udc80\u93cd\u56ea\u7611"
+                },
+                "level": {
+                    "type": "string"
+                }
+            },
+            "description": "\u934f\udcac\u9359\u9550\u4fca\u93ad\udcaf\u741b\udca8"
+        },
+        "\u93b6\u30e8\u3003\u93c1\u7248\u5d41\u741b\udca8": {
+            "type": "object",
+            "properties": {
+                "addAmt": {
+                    "type": "number",
+                    "description": "\u93c8\u581d\udca2\u70b2\u567a\u68f0\udc9d"
+                },
+                "addRate": {
+                    "type": "number",
+                    "description": "\u93c8\u581d\udca2\u70b2\u567a\u941c\udc87"
+                },
+                "companyAddress": {
+                    "type": "string",
+                    "description": "\u934f\udcac\u9359\u7a3f\u6e74\u9367\udc80"
+                },
+                "companyId": {
+                    "type": "integer",
+                    "format": "int64",
+                    "description": "\u934f\udcac\u9359\u7ad4d"
+                },
+                "companyName": {
+                    "type": "string",
+                    "description": "\u934f\udcac\u9359\u7a3f\u6095\u7ec9\udcb0"
+                },
+                "companyNo": {
+                    "type": "string",
+                    "description": "\u934f\udcac\u9359\u54e5\u7d2a\u9359\udcb7"
+                },
+                "currentAmt": {
+                    "type": "number",
+                    "description": "\u8930\u64b3\u58a0\u95b2\u6226\udca2\udc9d"
+                },
+                "highCompanyNo": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer",
+                    "format": "int64",
+                    "description": "\u935e\udcaf\u6d93\udc80\u93cd\u56ea\u7611"
+                },
+                "keepDate": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "\u7481\u62cc\u5904\u93c3\u30e6\u6e61"
+                },
+                "lastYearAmt": {
+                    "type": "number",
+                    "description": "\u9358\u8bf2\u52fe\u935a\u5c7e\u6e61\u95b2\u6226\udca2\udc9d"
+                },
+                "lastYearTotalAmt": {
+                    "type": "number",
+                    "description": "\u9358\u8bf2\u52fe\u7ef1\udcaf\u7481\uffe0\u567e\u68f0\udc9d"
+                },
+                "level": {
+                    "type": "string",
+                    "description": "0\u93c4\udcaf\u6d93\udc80\u7efe\u044d\u7d1d1\u93c4\udcaf\u6d5c\u5c80\u9a87"
+                },
+                "remarks": {
+                    "type": "string",
+                    "description": "\u6fb6\u56e8\u655e"
+                },
+                "subCompany": {
+                    "type": "array",
+                    "description": "\u701b\u612c\u53d5\u9359\udcb8",
+                    "items": {
+                        "$ref": "#/definitions/\u93b6\u30e8\u3003\u93c1\u7248\u5d41\u741b\udca8"
+                    }
+                },
+                "thisYearTotalAmt": {
+                    "type": "number",
+                    "description": "\u6d60\u5a42\u52fe\u7ef1\udcaf\u7481\uffe0\u567e\u68f0\udc9d"
+                },
+                "typeNo": {
+                    "type": "string",
+                    "description": "\u93b8\u56e8\u7223\u7eeb\u8bf2\u57c6\u951b\u6c33\u60c0\u6d93\u6c2d\u6579\u934f\udca5\t01\n\u9352\u2542\u9f0e\u93ac\u5a5a\udca2\u6f12t02\n\u7039\u70b5\u5e47\u7ecb\u5ea8\u567e\t03\n\u934f\u30e5\u7c31\u7ecb\u5ea8\u567e\t04\n\u93b5\udc80\u5bf0\u6943\u25e3\t05\n\u9351\udc80\u9352\u2542\u9f0e\t06\n\u7039\u70b5\u5e47\u7ecb\u5ea8\u567e(\u93b5\udcac\u5bb8\u70b2\u6e74\u9356\udcba)\t07\n\u934f\u30e5\u7c31\u7ecb\u5ea8\u567e(\u93b5\udcac\u5bb8\u70b2\u6e74\u9356\udcba)\t08"
+                },
+                "yearAddAmt": {
+                    "type": "number",
+                    "description": "\u9a9e\u6751\udca2\u70b2\u567a\u68f0\udc9d"
+                },
+                "yearAddRate": {
+                    "type": "number",
+                    "description": "\u9a9e\u6751\udca2\u70b2\u567a\u941c\udc87"
+                }
+            },
+            "description": "\u93b6\u30e8\u3003\u93c1\u7248\u5d41\u741b\udca8"
+        },
+        "\u93b6\u30e8\u3003\u7eeb\u8bf2\u57c6\u9352\u6944\u3003": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "format": "int64",
+                    "description": "\u935e\udcaf\u6d93\udc80\u93cd\u56ea\u7611"
+                },
+                "typeName": {
+                    "type": "string"
+                },
+                "typeNo": {
+                    "type": "string"
+                },
+                "typeStatus": {
+                    "type": "string"
+                }
+            },
+            "description": "\u93b6\u30e8\u3003\u7eeb\u8bf2\u57c6\u9352\u6944\u3003"
+        },
+        "\u9422\u3126\u57db\u7eeb\udcbb": {
+            "type": "object",
+            "properties": {
+                "deptId": {
+                    "type": "string"
+                },
+                "equipmentNo": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer",
+                    "format": "int64",
+                    "description": "\u935e\udcaf\u6d93\udc80\u93cd\u56ea\u7611"
+                },
+                "loginName": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                }
+            },
+            "description": "\u9422\u3126\u57db\u741b\udca8"
+        }
+    }
+}

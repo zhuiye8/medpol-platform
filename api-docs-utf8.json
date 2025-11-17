@@ -1,0 +1,1991 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "数据分析接口文档",
+    "version": "版本1.0",
+    "title": "数据分析",
+    "termsOfService": "urn:tos",
+    "contact": {
+      "name": "数据分析",
+      "email": "2456068806@qq.com"
+    },
+    "license": {
+      "name": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0"
+    }
+  },
+  "host": "ailianhuan.xyz:8333",
+  "basePath": "/",
+  "tags": [
+    {
+      "name": "用户管理",
+      "description": "User Manage Controller"
+    },
+    {
+      "name": "basic-controller",
+      "description": "测试模块"
+    },
+    {
+      "name": "报表数据",
+      "description": "Finance Controller"
+    },
+    {
+      "name": "产品台账",
+      "description": "Product Ledger Controller"
+    },
+    {
+      "name": "指标考核",
+      "description": "Assessment Indicators Controller"
+    },
+    {
+      "name": "财务数据管理",
+      "description": "Finance Date Manage Controller"
+    },
+    {
+      "name": "产品台账管理",
+      "description": "Product Ledger Manage Controller"
+    },
+    {
+      "name": "公司信息",
+      "description": "Company Controller"
+    },
+    {
+      "name": "用户登录",
+      "description": "Login Controller"
+    }
+  ],
+  "paths": {
+    "/assessmentIndicators/selectAssessmentIndicators": {
+      "post": {
+        "tags": [
+          "指标考核"
+        ],
+        "summary": "查询指标考核公司数据",
+        "operationId": "selectCompanyUsingPOST",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "assessmentIndicatorsCondition",
+            "description": "assessmentIndicatorsCondition",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AssessmentIndicatorsCondition"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/AssessmentIndicatorsCondition"
+            }
+          },
+          "201": {
+            "description": "Created"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/assessmentIndicators/selectTarget": {
+      "post": {
+        "tags": [
+          "指标考核"
+        ],
+        "summary": "根据公司编号查询查询指标考核数据",
+        "operationId": "selectTargetUsingPOST",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "assessmentIndicatorsCondition",
+            "description": "assessmentIndicatorsCondition",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AssessmentIndicatorsCondition"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/AssessmentIndicatorsCondition"
+            }
+          },
+          "201": {
+            "description": "Created"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/ceshi/hello": {
+      "get": {
+        "tags": [
+          "basic-controller"
+        ],
+        "summary": "测试hello",
+        "operationId": "helloUsingGET",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "description": "name",
+            "required": false,
+            "type": "string",
+            "default": "unknown user"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/用户类"
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/company/insertCompany": {
+      "post": {
+        "tags": [
+          "公司信息"
+        ],
+        "summary": "新增公司数据",
+        "operationId": "insertFinanceDateUsingPOST",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "companyList",
+            "description": "companyList",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/公司信息"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "201": {
+            "description": "Created"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/company/selectCompany": {
+      "post": {
+        "tags": [
+          "公司信息"
+        ],
+        "summary": "查询公司数据",
+        "operationId": "selectCompanyUsingPOST_1",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "company",
+            "description": "company",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CompanyCondition"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/CompanyCondition"
+            }
+          },
+          "201": {
+            "description": "Created"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/finance/getFinanceDate": {
+      "post": {
+        "tags": [
+          "报表数据"
+        ],
+        "summary": "根据类型获取报表数据",
+        "operationId": "getFinanceDateUsingPOST",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "financeType",
+            "in": "query",
+            "description": "financeType",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "keepDate",
+            "in": "query",
+            "description": "keepDate",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "companyNo",
+            "in": "query",
+            "description": "companyNo",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "string"
+            }
+          },
+          "201": {
+            "description": "Created"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/finance/getFinanceDateCompare": {
+      "post": {
+        "tags": [
+          "报表数据"
+        ],
+        "summary": "获取数据分析数据",
+        "operationId": "getFinanceDateCompareUsingPOST",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "compareType",
+            "in": "query",
+            "description": "compareType",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "companyNos",
+            "in": "query",
+            "description": "companyNos",
+            "required": true,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "description": "year",
+            "required": true,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
+          },
+          {
+            "name": "month",
+            "in": "query",
+            "description": "month",
+            "required": true,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "string"
+            }
+          },
+          "201": {
+            "description": "Created"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/finance/getFinanceDateGraph": {
+      "post": {
+        "tags": [
+          "报表数据"
+        ],
+        "summary": "根据类型获取报表图形数据",
+        "operationId": "getFinanceDateGraphUsingPOST",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "financeType",
+            "in": "query",
+            "description": "financeType",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "keepDate",
+            "in": "query",
+            "description": "keepDate",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "string"
+            }
+          },
+          "201": {
+            "description": "Created"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/finance/getFinanceType": {
+      "post": {
+        "tags": [
+          "报表数据"
+        ],
+        "summary": "获取报表列表",
+        "operationId": "getFinanceTypeUsingPOST",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/IResponse"
+            }
+          },
+          "201": {
+            "description": "Created"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/finance/insertFinanceDate": {
+      "post": {
+        "tags": [
+          "报表数据"
+        ],
+        "summary": "新增报表数据",
+        "operationId": "insertFinanceDateUsingPOST_1",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "financeTypeList",
+            "description": "financeTypeList",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/报表类别列表"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "201": {
+            "description": "Created"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/finance/insertFinanceType": {
+      "post": {
+        "tags": [
+          "报表数据"
+        ],
+        "summary": "新增报表列表",
+        "operationId": "insertFinanceTypeUsingPOST",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "financeTypeList",
+            "description": "financeTypeList",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/报表类别列表"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/报表类别列表"
+            }
+          },
+          "201": {
+            "description": "Created"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/financeDate/add": {
+      "post": {
+        "tags": [
+          "财务数据管理"
+        ],
+        "summary": "新增财务数据",
+        "operationId": "addFinanceDateUsingPOST",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "financeDate",
+            "description": "financeDate",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/报表数据表"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/IResponse"
+            }
+          },
+          "201": {
+            "description": "Created"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/financeDate/dataList": {
+      "post": {
+        "tags": [
+          "财务数据管理"
+        ],
+        "summary": "获取财务全量数据数据",
+        "operationId": "getDataUsingPOST",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "keepDate",
+            "in": "query",
+            "description": "keepDate",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/IResponse«List«报表数据表»»"
+            }
+          },
+          "201": {
+            "description": "Created"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/financeDate/delete/{id}": {
+      "delete": {
+        "tags": [
+          "财务数据管理"
+        ],
+        "summary": "删除财务数据",
+        "operationId": "deleteFinanceDateUsingDELETE",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "id",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/IResponse"
+            }
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/financeDate/get/{id}": {
+      "get": {
+        "tags": [
+          "财务数据管理"
+        ],
+        "summary": "获取财务数据详情",
+        "operationId": "getFinanceDateByIdUsingGET",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "id",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/IResponse«报表数据表»"
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/financeDate/list": {
+      "get": {
+        "tags": [
+          "财务数据管理"
+        ],
+        "summary": "分页查询财务数据列表",
+        "operationId": "getFinanceDateListUsingGET",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "pageIndex",
+            "in": "query",
+            "description": "pageIndex",
+            "required": false,
+            "type": "integer",
+            "default": 1,
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "description": "pageSize",
+            "required": false,
+            "type": "integer",
+            "default": 10,
+            "format": "int32"
+          },
+          {
+            "name": "companyNo",
+            "in": "query",
+            "description": "companyNo",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/IResponse«IPage«报表数据表»»"
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/financeDate/update": {
+      "put": {
+        "tags": [
+          "财务数据管理"
+        ],
+        "summary": "更新财务数据",
+        "operationId": "updateFinanceDateUsingPUT",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "financeDate",
+            "description": "financeDate",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/报表数据表"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/IResponse"
+            }
+          },
+          "201": {
+            "description": "Created"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/ledger/getLedgerList": {
+      "post": {
+        "tags": [
+          "产品台账"
+        ],
+        "summary": "获取产品台账列表",
+        "operationId": "getLedgerListUsingPOST",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "condition",
+            "description": "condition",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AssessmentIndicatorsCondition"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/IResponse«object»"
+            }
+          },
+          "201": {
+            "description": "Created"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/login/insertUser": {
+      "post": {
+        "tags": [
+          "用户登录"
+        ],
+        "summary": "新增用户",
+        "operationId": "insertUserUsingPOST",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "request",
+            "description": "request",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/用户类"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/用户类"
+            }
+          },
+          "201": {
+            "description": "Created"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/login/login": {
+      "post": {
+        "tags": [
+          "用户登录"
+        ],
+        "summary": "登录接口",
+        "operationId": "loginUsingPOST",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "request",
+            "description": "request",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/用户类"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/用户类"
+            }
+          },
+          "201": {
+            "description": "Created"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/productLedger/add": {
+      "post": {
+        "tags": [
+          "产品台账管理"
+        ],
+        "summary": "新增台账数据",
+        "operationId": "addProductLedgerUsingPOST",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "productLedger",
+            "description": "productLedger",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ProductLedger"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/IResponse"
+            }
+          },
+          "201": {
+            "description": "Created"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/productLedger/delete/{id}": {
+      "delete": {
+        "tags": [
+          "产品台账管理"
+        ],
+        "summary": "删除台账数据",
+        "operationId": "deleteProductLedgerUsingDELETE",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "id",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/IResponse"
+            }
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/productLedger/get/{id}": {
+      "get": {
+        "tags": [
+          "产品台账管理"
+        ],
+        "summary": "获取台账详情",
+        "operationId": "getProductLedgerByIdUsingGET",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "id",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/IResponse«ProductLedger»"
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/productLedger/list": {
+      "get": {
+        "tags": [
+          "产品台账管理"
+        ],
+        "summary": "分页查询台账列表",
+        "operationId": "getProductLedgerListUsingGET",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "pageIndex",
+            "in": "query",
+            "description": "pageIndex",
+            "required": false,
+            "type": "integer",
+            "default": 1,
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "description": "pageSize",
+            "required": false,
+            "type": "integer",
+            "default": 10,
+            "format": "int32"
+          },
+          {
+            "name": "productName",
+            "in": "query",
+            "description": "productName",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/IResponse«IPage«ProductLedger»»"
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/productLedger/update": {
+      "put": {
+        "tags": [
+          "产品台账管理"
+        ],
+        "summary": "更新台账数据",
+        "operationId": "updateProductLedgerUsingPUT",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "productLedger",
+            "description": "productLedger",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ProductLedger"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/IResponse"
+            }
+          },
+          "201": {
+            "description": "Created"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/user/add": {
+      "post": {
+        "tags": [
+          "用户管理"
+        ],
+        "summary": "新增用户",
+        "operationId": "addUserUsingPOST",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "user",
+            "description": "user",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/用户类"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/IResponse"
+            }
+          },
+          "201": {
+            "description": "Created"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/user/delete/{id}": {
+      "delete": {
+        "tags": [
+          "用户管理"
+        ],
+        "summary": "删除用户",
+        "operationId": "deleteUserUsingDELETE",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "id",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/IResponse"
+            }
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/user/get/{id}": {
+      "get": {
+        "tags": [
+          "用户管理"
+        ],
+        "summary": "获取用户详情",
+        "operationId": "getUserByIdUsingGET",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "id",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/IResponse«用户类»"
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/user/list": {
+      "get": {
+        "tags": [
+          "用户管理"
+        ],
+        "summary": "分页查询用户列表",
+        "operationId": "getUserListUsingGET",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "name": "pageIndex",
+            "in": "query",
+            "description": "pageIndex",
+            "required": false,
+            "type": "integer",
+            "default": 1,
+            "format": "int32"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "description": "pageSize",
+            "required": false,
+            "type": "integer",
+            "default": 10,
+            "format": "int32"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/IResponse«IPage«用户类»»"
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/user/update": {
+      "put": {
+        "tags": [
+          "用户管理"
+        ],
+        "summary": "更新用户",
+        "operationId": "updateUserUsingPUT",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "*/*"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "user",
+            "description": "user",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/用户类"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/IResponse"
+            }
+          },
+          "201": {
+            "description": "Created"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "AssessmentIndicatorsCondition": {
+      "type": "object",
+      "properties": {
+        "companyNo": {
+          "type": "string",
+          "description": "查询考核指标公司详情数据使用"
+        },
+        "keepDate": {
+          "type": "string"
+        },
+        "pageIndex": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "CompanyCondition": {
+      "type": "object",
+      "properties": {
+        "companyName": {
+          "type": "string"
+        },
+        "companyNo": {
+          "type": "string"
+        },
+        "highCompanyNo": {
+          "type": "string"
+        },
+        "level": {
+          "type": "string"
+        },
+        "pageIndex": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "pageSize": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "IPage«ProductLedger»": {
+      "type": "object",
+      "properties": {
+        "current": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "pages": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "records": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ProductLedger"
+          }
+        },
+        "size": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "total": {
+          "type": "integer",
+          "format": "int64"
+        }
+      }
+    },
+    "IPage«报表数据表»": {
+      "type": "object",
+      "properties": {
+        "current": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "pages": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "records": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/报表数据表"
+          }
+        },
+        "size": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "total": {
+          "type": "integer",
+          "format": "int64"
+        }
+      }
+    },
+    "IPage«用户类»": {
+      "type": "object",
+      "properties": {
+        "current": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "pages": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "records": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/用户类"
+          }
+        },
+        "size": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "total": {
+          "type": "integer",
+          "format": "int64"
+        }
+      }
+    },
+    "IResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object"
+        },
+        "msg": {
+          "type": "string"
+        }
+      }
+    },
+    "IResponse«IPage«ProductLedger»»": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "data": {
+          "$ref": "#/definitions/IPage«ProductLedger»"
+        },
+        "msg": {
+          "type": "string"
+        }
+      }
+    },
+    "IResponse«IPage«报表数据表»»": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "data": {
+          "$ref": "#/definitions/IPage«报表数据表»"
+        },
+        "msg": {
+          "type": "string"
+        }
+      }
+    },
+    "IResponse«IPage«用户类»»": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "data": {
+          "$ref": "#/definitions/IPage«用户类»"
+        },
+        "msg": {
+          "type": "string"
+        }
+      }
+    },
+    "IResponse«List«报表数据表»»": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/报表数据表"
+          }
+        },
+        "msg": {
+          "type": "string"
+        }
+      }
+    },
+    "IResponse«ProductLedger»": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "data": {
+          "$ref": "#/definitions/ProductLedger"
+        },
+        "msg": {
+          "type": "string"
+        }
+      }
+    },
+    "IResponse«object»": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object"
+        },
+        "msg": {
+          "type": "string"
+        }
+      }
+    },
+    "IResponse«报表数据表»": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "data": {
+          "$ref": "#/definitions/报表数据表"
+        },
+        "msg": {
+          "type": "string"
+        }
+      }
+    },
+    "IResponse«用户类»": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "data": {
+          "$ref": "#/definitions/用户类"
+        },
+        "msg": {
+          "type": "string"
+        }
+      }
+    },
+    "ProductLedger": {
+      "type": "object",
+      "properties": {
+        "applicationField": {
+          "type": "string",
+          "description": "应用领域"
+        },
+        "approvalDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "批件日期（结题日期）"
+        },
+        "approvalNumber": {
+          "type": "string",
+          "description": "批准文号"
+        },
+        "companyId": {
+          "type": "integer",
+          "format": "int64",
+          "description": "公司id"
+        },
+        "companyName": {
+          "type": "string",
+          "description": "转化公司"
+        },
+        "companyNo": {
+          "type": "string",
+          "description": "公司编号"
+        },
+        "firstSalesAmount": {
+          "type": "string",
+          "description": "首次销售（起始月，销售额）"
+        },
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "produceWorkshop": {
+          "type": "string",
+          "description": "生产车间"
+        },
+        "productName": {
+          "type": "string",
+          "description": "产品名称"
+        },
+        "productionStatus": {
+          "type": "string",
+          "description": "投产情况（排产、批量情况）"
+        },
+        "salesAmount": {
+          "type": "string",
+          "description": "销售金额（月度、季度）"
+        },
+        "salesNumber": {
+          "type": "string",
+          "description": "销售数量（月度、季度）"
+        },
+        "totalAmount": {
+          "type": "string",
+          "description": "累计销售额"
+        },
+        "transformationDate": {
+          "type": "string",
+          "description": "转化时间"
+        },
+        "yearSalesAmount": {
+          "type": "string",
+          "description": "年度总销售额"
+        }
+      }
+    },
+    "公司信息": {
+      "type": "object",
+      "properties": {
+        "companyAddress": {
+          "type": "string"
+        },
+        "companyName": {
+          "type": "string"
+        },
+        "companyNo": {
+          "type": "string"
+        },
+        "highCompanyId": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "highCompanyNo": {
+          "type": "string"
+        },
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "description": "唯一标识"
+        },
+        "level": {
+          "type": "string"
+        }
+      },
+      "description": "公司信息表"
+    },
+    "报表数据表": {
+      "type": "object",
+      "properties": {
+        "addAmt": {
+          "type": "number",
+          "description": "月增减额"
+        },
+        "addRate": {
+          "type": "number",
+          "description": "月增减率"
+        },
+        "companyAddress": {
+          "type": "string",
+          "description": "公司地址"
+        },
+        "companyId": {
+          "type": "integer",
+          "format": "int64",
+          "description": "公司id"
+        },
+        "companyName": {
+          "type": "string",
+          "description": "公司名称"
+        },
+        "companyNo": {
+          "type": "string",
+          "description": "公司编号"
+        },
+        "currentAmt": {
+          "type": "number",
+          "description": "当前金额"
+        },
+        "highCompanyNo": {
+          "type": "string"
+        },
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "description": "唯一标识"
+        },
+        "keepDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "记账日期"
+        },
+        "lastYearAmt": {
+          "type": "number",
+          "description": "去年同期金额"
+        },
+        "lastYearTotalAmt": {
+          "type": "number",
+          "description": "去年累计金额"
+        },
+        "level": {
+          "type": "string",
+          "description": "0是一级，1是二级"
+        },
+        "remarks": {
+          "type": "string",
+          "description": "备注"
+        },
+        "subCompany": {
+          "type": "array",
+          "description": "子公司",
+          "items": {
+            "$ref": "#/definitions/报表数据表"
+          }
+        },
+        "thisYearTotalAmt": {
+          "type": "number",
+          "description": "今年累计金额"
+        },
+        "typeNo": {
+          "type": "string",
+          "description": "指标类别：营业收入\t01\n利润总额\t02\n实现税金\t03\n入库税金\t04\n所得税\t05\n净利润\t06\n实现税金(扬州地区)\t07\n入库税金(扬州地区)\t08"
+        },
+        "yearAddAmt": {
+          "type": "number",
+          "description": "年增减额"
+        },
+        "yearAddRate": {
+          "type": "number",
+          "description": "年增减率"
+        }
+      },
+      "description": "报表数据表"
+    },
+    "报表类别列表": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "description": "唯一标识"
+        },
+        "typeName": {
+          "type": "string"
+        },
+        "typeNo": {
+          "type": "string"
+        },
+        "typeStatus": {
+          "type": "string"
+        }
+      },
+      "description": "报表类别列表"
+    },
+    "用户类": {
+      "type": "object",
+      "properties": {
+        "deptId": {
+          "type": "string"
+        },
+        "equipmentNo": {
+          "type": "string"
+        },
+        "id": {
+          "type": "integer",
+          "format": "int64",
+          "description": "唯一标识"
+        },
+        "loginName": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        }
+      },
+      "description": "用户表"
+    }
+  }
+}
