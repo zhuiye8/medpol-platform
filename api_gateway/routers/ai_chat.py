@@ -7,15 +7,19 @@ import logging
 from typing import Any, List, Optional
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel
 
+from common.ai.orchestrator import AbilityRouter
 from common.ai.providers import AIProviderError, AIProviderFactory
 from common.clients.finance_api.tools import FINANCE_TOOLS, execute_tool
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 provider_factory = AIProviderFactory()
+ability_router = AbilityRouter(provider_factory)
+ALLOWED_TOOL_NAMES = {tool["function"]["name"] for tool in FINANCE_TOOLS}
+SENSITIVE_KEYWORDS = ["finance_records", "ai_results", "sources", "crawler_jobs"]
 
 
 class ChatMessage(BaseModel):
@@ -37,22 +41,24 @@ class ToolCall(BaseModel):
 
 
 class ChatResponse(BaseModel):
-    message: ChatMessage
-    tool_calls: Optional[List[ToolCall]] = None
     conversation_id: str
+    reply: ChatMessage
+    tool_calls: Optional[List[ToolCall]] = None
 
 
-PERSONA_PROMPTS = {
-    "general": """你是联环药业的综合智能助手，熟悉集团的业务、政策、产品与流程。请以专业、谨慎的语气回答用户问题，必要时主动确认缺失信息。""",
-    "finance": """你是联环药业的财务数据分析助手，能够使用 finance_records 表中的本地财务数据（营业收入、利润、税金等）进行查询、对比和解读。回答时请明确数据来源、分析逻辑和结论，并在需要时调用提供的工具检索最新财务数据。""",
-}
+class ApiEnvelope(BaseModel):
+    code: int
+    message: str
+    data: Optional[ChatResponse] = None
 
 
 @router.post("/chat")
 async def chat(request: ChatRequest):
     conversation_id = request.conversation_id or str(uuid4())
     persona = (request.persona or "general").lower()
-    system_prompt = PERSONA_PROMPTS.get(persona, PERSONA_PROMPTS["general"])
+    last_user_message = request.messages[-1].content if request.messages else ""
+    context = ability_router.resolve(persona, last_user_message)
+    system_prompt = context.prompt
 
     logger.info(
         "收到对话请求",
@@ -71,30 +77,36 @@ async def chat(request: ChatRequest):
         provider = provider_factory.get_client()
     except AIProviderError as exc:
         logger.error("AI Provider 初始化失败: %s", exc)
-        raise HTTPException(status_code=500, detail=str(exc))
+        return ApiEnvelope(code=1001, message=f"AI Provider 初始化失败: {exc}", data=None)
 
     client = provider.client
     model = provider.model
+    tools_payload = FINANCE_TOOLS if context.use_finance else None
+    chat_kwargs = {
+        "model": model,
+        "messages": messages,
+    }
+    if tools_payload:
+        chat_kwargs["tools"] = tools_payload
+        chat_kwargs["tool_choice"] = "auto"
 
     try:
-        first_response = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            tools=FINANCE_TOOLS,
-            tool_choice="auto",
-        )
+        first_response = client.chat.completions.create(**chat_kwargs)
     except Exception as exc:  # pragma: no cover - LLM 调用异常
         logger.error("LLM 调用失败: %s", exc, exc_info=True)
-        raise HTTPException(status_code=500, detail=f"AI对话失败: {exc}")
+        return ApiEnvelope(code=1002, message=f"AI对话失败: {exc}", data=None)
 
     assistant_message = first_response.choices[0].message
 
-    if assistant_message.tool_calls:
+    if tools_payload and assistant_message.tool_calls:
         logger.info("LLM 请求调用工具: %d", len(assistant_message.tool_calls))
         tool_call_results = []
 
         for tool_call in assistant_message.tool_calls:
             tool_name = tool_call.function.name
+            if tool_name not in ALLOWED_TOOL_NAMES:
+                logger.warning("收到未知工具调用: %s", tool_name)
+                continue
             try:
                 arguments = json.loads(tool_call.function.arguments)
             except json.JSONDecodeError:
@@ -141,22 +153,39 @@ async def chat(request: ChatRequest):
             )
         except Exception as exc:  # pragma: no cover - LLM 调用异常
             logger.error("工具结果回传后 LLM 调用失败: %s", exc, exc_info=True)
-            raise HTTPException(status_code=500, detail=f"AI对话失败: {exc}")
+            return ApiEnvelope(code=1003, message=f"AI对话失败: {exc}", data=None)
 
         final_message = final_response.choices[0].message
-        return ChatResponse(
-            message=ChatMessage(role="assistant", content=final_message.content or ""),
-            tool_calls=[ToolCall(**tc) for tc in tool_call_results],
-            conversation_id=conversation_id,
+        final_text = sanitize_content(final_message.content or "")
+        return ApiEnvelope(
+            code=0,
+            message="ok",
+            data=ChatResponse(
+                conversation_id=conversation_id,
+                reply=ChatMessage(role="assistant", content=final_text),
+                tool_calls=[ToolCall(**tc) for tc in tool_call_results],
+            ),
         )
 
     logger.info("对话完成，无需调用工具")
-    return ChatResponse(
-        message=ChatMessage(role="assistant", content=assistant_message.content or ""),
-        conversation_id=conversation_id,
+    return ApiEnvelope(
+        code=0,
+        message="ok",
+        data=ChatResponse(
+            conversation_id=conversation_id,
+            reply=ChatMessage(role="assistant", content=sanitize_content(assistant_message.content or "")),
+        ),
     )
 
 
 @router.post("/chat/stream")
 async def chat_stream(request: ChatRequest):  # pragma: no cover - 未实现
-    raise HTTPException(status_code=501, detail="流式对话功能暂未实现")
+    return ApiEnvelope(code=1501, message="流式对话功能暂未实现", data=None)
+
+
+def sanitize_content(content: str) -> str:
+    safe = content or ""
+    for keyword in SENSITIVE_KEYWORDS:
+        if keyword in safe:
+            safe = safe.replace(keyword, "本地财务数据")
+    return safe

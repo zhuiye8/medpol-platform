@@ -1,1 +1,1 @@
-﻿"AI provider 工具包"
+﻿"""AI module namespace"""

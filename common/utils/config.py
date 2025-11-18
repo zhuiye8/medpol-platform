@@ -34,7 +34,7 @@ class Settings(BaseSettings):
 
     # AI对话配置
     ai_chat_model: str = Field("gpt-4", env="AI_CHAT_MODEL")
-    ai_chat_max_history: int = Field(10, env="AI_CHAT_MAX_HISTORY")
+    ai_router_model: Optional[str] = Field(None, env="AI_ROUTER_MODEL")
 
     model_config = SettingsConfigDict(
         case_sensitive=False,

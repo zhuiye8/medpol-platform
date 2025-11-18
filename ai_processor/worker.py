@@ -11,11 +11,7 @@ from typing import Optional
 from bs4 import BeautifulSoup
 from celery import Celery
 
-from common.clients.llm.base import LLMRequest
-from common.clients.llm.openai_provider import OpenAIProvider
-from common.clients.llm.deepseek_provider import DeepSeekProvider
-from common.clients.llm.mock_provider import MockProvider
-from common.clients.llm.router import ProviderRouter
+from common.ai.providers import AIProviderError, AIProviderFactory
 from common.persistence.database import get_session_factory, session_scope
 from common.persistence.repository import ArticleRepository, AIResultRepository
 from common.persistence import models as orm_models
@@ -33,28 +29,8 @@ celery_app = Celery(
 )
 celery_app.conf.task_default_queue = AI_QUEUE
 
-router = ProviderRouter(primary=settings.ai_primary, fallback=settings.ai_fallback)
-registered = False
-if settings.openai_api_key:
-    router.register(
-        OpenAIProvider(
-            api_key=settings.openai_api_key,
-            base_url=settings.openai_base_url,
-            default_model=settings.openai_model,
-        )
-    )
-    registered = True
-if settings.deepseek_api_key:
-    router.register(
-        DeepSeekProvider(
-            api_key=settings.deepseek_api_key,
-            base_url=settings.deepseek_base_url,
-            default_model=settings.deepseek_model,
-        )
-    )
-    registered = True
-if not registered:
-    router.register(MockProvider())
+# 统一使用 AIProviderFactory，保持与对话接口一致的 Provider 选择与回退
+provider_factory = AIProviderFactory()
 
 SESSION_FACTORY = None
 if os.getenv("DATABASE_URL"):
@@ -65,57 +41,73 @@ if os.getenv("DATABASE_URL"):
         SESSION_FACTORY = None
 
 
-def _invoke_llm(prompt: str, task_type: str, meta: Optional[dict] = None):
-    request = LLMRequest(prompt=prompt, task_type=task_type, meta=meta or {})
-    return router.invoke(request)
+def _invoke_llm(prompt: str, task_type: str, temperature: float = 0.2) -> str:
+    """
+    统一的 LLM 调用入口，使用 ProviderFactory（同对话接口），便于配置与回退一致。
+    """
 
+    try:
+        bundle = provider_factory.get_client()
+    except AIProviderError as exc:
+        raise RuntimeError(f"AI Provider 初始化失败: {exc}")
+
+    system_prompt = {
+        "summary": "你是医药政策内容的中文摘要助手，回答必须简洁、客观、中文输出。",
+        "translation_check": "你是语言识别助手，判断文本是否需要翻译为中文，只回答 true 或 false。",
+        "translation": "你是精准中文翻译助手，保持 HTML 标签与格式不变，仅翻译可见文字，专业名词保留。",
+        "analysis": "你是要点提炼助手，输出规范 JSON，包括 key_points/risks/actions，每项1-3条，中文。",
+    }.get(task_type, "你是联环药业的内容处理助手，回答使用中文。")
+
+    response = bundle.client.chat.completions.create(
+        model=bundle.model,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=temperature,
+    )
+    return (response.choices[0].message.content or "").strip()
 
 def _generate_summary(text: str, title: str) -> str:
     prompt = (
-        "请用简体中文生成一段 150 字以内的摘要，概述下文的关键信息。\n\n"
-        f"标题：{title}\n\n正文（截断）:\n{text[:2000]}"
+        "Generate a concise Chinese summary within 150 characters.\n\n"
+        f"Title: {title}\n\nBody (truncated):\n{text[:2000]}"
     )
-    response = _invoke_llm(prompt, "summary")
-    return response.content.strip()
+    return _invoke_llm(prompt, "summary").strip()
+
 
 
 def _ask_should_translate(text: str) -> bool:
     snippet = text[:1200]
     prompt = (
-        "以下文本是否需要翻译成中文才能被中文读者理解？"
-        "如果文本主要是中文或无需翻译，请回答 false；否则回答 true。"
-        "只输出 true 或 false。\n\n"
-        f"文本：\n{snippet}"
+        "Should this text be translated to Chinese for readers to understand? "
+        "Answer false if mainly Chinese or no need; otherwise true. "
+        "Only output true or false.\n\n"
+        f"Text:\n{snippet}"
     )
-    response = _invoke_llm(prompt, "translation_check")
-    answer = response.content.strip().lower()
+    answer = _invoke_llm(prompt, "translation_check").strip().lower()
     return answer.startswith("t")
+
 
 
 def _translate_html(html: str) -> str:
     prompt = (
-        "请将以下 HTML 内容翻译成简体中文。保持所有标签、属性、换行与图片不变，"
-        "只翻译可见的文字，输出完整 HTML：\n\n"
+        "Translate the following HTML into Simplified Chinese. Keep all tags, attributes, line breaks, and images unchanged; "
+        "only translate visible text and output full HTML.\n\n"
         f"{html}"
     )
-    response = _invoke_llm(prompt, "translation")
-    return response.content.strip()
+    return _invoke_llm(prompt, "translation").strip()
+
 
 
 def _generate_analysis(text: str, title: str) -> Optional[dict]:
     prompt = (
-        "请阅读以下政策内容，使用 JSON 格式输出：\n"
-        "{\n"
-        '  "key_points": ["要点1", "要点2"],\n'
-        '  "risks": ["风险1"],\n'
-        '  "actions": ["建议1"]\n'
-        "}\n"
-        "要求：每个数组包含 1-3 条，语言简洁。\n"
-        "必须严格输出合法 JSON，不要使用 ``` 包裹，不要附加额外文字。\n\n"
-        f"标题：{title}\n正文：{text[:3000]}"
+        "Read the content and output strict JSON: {\"key_points\":[], \"risks\":[], \"actions\":[]} \n"
+        "Each array 1-3 concise Chinese items. Do not wrap with backticks, output valid JSON only.\n\n"
+        f"Title: {title}\nBody: {text[:3000]}"
     )
-    response = _invoke_llm(prompt, "analysis")
-    analysis, structured = format_analysis_content(response.content)
+    analysis_raw = _invoke_llm(prompt, "analysis")
+    analysis, structured = format_analysis_content(analysis_raw)
     if not structured:
         logger.warning("AI 分析未能结构化，将保存原文供后续修复")
     return analysis
