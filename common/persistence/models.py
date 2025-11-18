@@ -202,3 +202,14 @@ class FinanceRecordORM(TimestampMixin, Base):
     raw_payload: Mapped[dict] = mapped_column(JSON, default=dict)
 
     sync_log: Mapped[Optional["FinanceSyncLogORM"]] = relationship(back_populates="records")
+
+
+class ConversationSessionORM(TimestampMixin, Base):
+    """会话持久化：摘要 + 窗口消息"""
+
+    __tablename__ = "conversation_sessions"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    persona: Mapped[Optional[str]] = mapped_column(String(32), default="general")
+    summary: Mapped[str] = mapped_column(Text, default="")
+    messages_json: Mapped[List[dict]] = mapped_column(JSON, default=list)

@@ -36,6 +36,13 @@ class Settings(BaseSettings):
     ai_chat_model: str = Field("gpt-4", env="AI_CHAT_MODEL")
     ai_router_model: Optional[str] = Field(None, env="AI_ROUTER_MODEL")
 
+    # 记忆配置
+    memory_ttl_minutes: int = Field(60, env="MEMORY_TTL_MINUTES")
+    memory_window: int = Field(6, env="MEMORY_WINDOW")
+    memory_summary_threshold: int = Field(10, env="MEMORY_SUMMARY_THRESHOLD")
+    memory_summary_model: Optional[str] = Field(None, env="MEMORY_SUMMARY_MODEL")
+    memory_enable_stagea_cache: bool = Field(False, env="MEMORY_ENABLE_STAGEA_CACHE")
+
     model_config = SettingsConfigDict(
         case_sensitive=False,
         env_file=".env",

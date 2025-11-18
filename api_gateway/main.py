@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import logging
+from logging.handlers import RotatingFileHandler
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -22,6 +24,21 @@ def _load_allowed_origins() -> tuple[list[str], bool]:
 
 app = FastAPI(title="Med Policy Platform API", version="0.1.0")
 allow_origins, allow_credentials = _load_allowed_origins()
+
+# 配置文件日志（用于调试），如未设置 LOG_FILE_PATH 则仅输出到 stdout
+log_file = os.getenv("LOG_FILE_PATH")
+if log_file:
+    handler = RotatingFileHandler(log_file, maxBytes=5 * 1024 * 1024, backupCount=2, encoding="utf-8")
+    formatter = logging.Formatter(
+        "%(asctime)s [%(levelname)s] %(name)s %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    handler.setFormatter(formatter)
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    if not any(isinstance(h, RotatingFileHandler) for h in root_logger.handlers):
+        root_logger.addHandler(handler)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allow_origins,

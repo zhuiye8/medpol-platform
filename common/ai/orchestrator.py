@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import List
 
 from common.ai.prompts import DECIDER_SYSTEM_PROMPT, PERSONAS, PROMPT_SECTIONS
+from common.utils.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,9 @@ class AbilityRouter:
 
     def __init__(self, provider_factory) -> None:
         self.provider_factory = provider_factory
+        self.settings = get_settings()
+        self.enable_cache = bool(self.settings.memory_enable_stagea_cache)
+        self._cache: dict[str, CapabilityDecision] = {}
 
     def resolve(self, persona: str, last_user_message: str) -> OrchestratedContext:
         persona_key = persona if persona in PERSONAS else "general"
@@ -61,6 +65,12 @@ class AbilityRouter:
         )
 
     def _decide(self, user_message: str) -> CapabilityDecision:
+        cache_key = None
+        if self.enable_cache:
+            cache_key = str(hash(user_message))
+            if cache_key in self._cache:
+                return self._cache[cache_key]
+
         try:
             client_bundle = self.provider_factory.get_client(purpose="router")
             response = client_bundle.client.chat.completions.create(
@@ -73,13 +83,17 @@ class AbilityRouter:
             )
             content = response.choices[0].message.content or "{}"
             data = json.loads(content)
-            return CapabilityDecision(
+            decision = CapabilityDecision(
                 use_finance=bool(data.get("needs_finance")),
                 use_knowledge=bool(data.get("needs_knowledge")),
             )
         except Exception as exc:  # pragma: no cover - 兜底
             logger.warning("能力判定失败，使用 fallback: %s", exc)
-            return self._fallback_decision(user_message)
+            decision = self._fallback_decision(user_message)
+
+        if cache_key:
+            self._cache[cache_key] = decision
+        return decision
 
     def _fallback_decision(self, user_message: str) -> CapabilityDecision:
         finance_keywords = ["收入", "利润", "营业", "税", "净利", "营收", "财报", "财务"]
