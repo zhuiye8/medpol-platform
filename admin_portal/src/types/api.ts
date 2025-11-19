@@ -3,8 +3,12 @@ export type ArticleCategory =
   | "fda_policy"
   | "ema_policy"
   | "pmda_policy"
+  | "bidding"
+  | "laws"
+  | "institution"
   | "project_apply"
-  | "domestic_policy";
+  | "cde_trend"
+  | "industry_trend";
 
 export interface Article {
   id: string;

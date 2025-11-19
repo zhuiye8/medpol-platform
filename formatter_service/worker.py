@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 
 from celery import Celery
 
-from common.domain import Article, RawArticle
+from common.domain import Article, RawArticle, ArticleCategory
 from common.persistence.database import get_session_factory, session_scope
 from common.persistence import models as orm_models
 from common.persistence.repository import ArticleRepository, SourceRepository
@@ -71,6 +71,16 @@ class FormatterDeduper:
 DEDUPER = FormatterDeduper(STATE_PATH)
 
 
+def _is_project_apply(content: str, title: str) -> bool:
+    """判断是否为项目申报类信息，关键词优先，兜底使用大模型判断。"""
+
+    text = (title + " " + content).lower()
+    keywords = ["申报", "项目", "征集", "遴选", "扶持", "资金", "奖励", "认定", "指南"]
+    if any(k in text for k in keywords):
+        return True
+    return False
+
+
 def _to_article(raw: RawArticle) -> Article:
     """将原始载荷转换为标准 Article。"""
 
@@ -102,6 +112,8 @@ def _to_article(raw: RawArticle) -> Article:
         translated_content=None,
         translated_content_html=None,
         original_source_language=original_language or "unknown",
+        apply_status="pending" if raw.category == ArticleCategory.PROJECT_APPLY else None,
+        is_positive_policy=None,
     )
 
 
@@ -126,6 +138,14 @@ def process_raw_article(raw_article: Dict) -> Dict:
         }
 
     article = _to_article(raw)
+    if article.category == ArticleCategory.PROJECT_APPLY:
+        keep = _is_project_apply(article.content_text, article.title)
+        if not keep:
+            return {
+                "skipped": True,
+                "reason": "not_project_apply",
+                "article_id": raw.article_id,
+            }
     content_hash = hashlib.sha256(article.content_text.encode("utf-8")).hexdigest()
     if DEDUPER.is_duplicate(content_hash):
         return {
@@ -196,6 +216,8 @@ def _persist_article(article: Article) -> None:
                 translated_content=None,
                 translated_content_html=article.translated_content_html,
                 original_source_language=article.original_source_language,
+                apply_status=article.apply_status,
+                is_positive_policy=article.is_positive_policy,
             )
             article_repo.add(new_article)
 
@@ -218,6 +240,8 @@ def _apply_article(target: orm_models.ArticleORM, article: Article) -> None:
     target.translated_content = article.translated_content
     target.translated_content_html = article.translated_content_html
     target.original_source_language = article.original_source_language
+    target.apply_status = article.apply_status
+    target.is_positive_policy = article.is_positive_policy
 
 
 def _derive_base_url(url: str) -> str:

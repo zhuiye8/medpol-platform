@@ -19,6 +19,7 @@ from sqlalchemy import (
     Text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
 from common.domain import ArticleCategory
 
 
@@ -85,6 +86,8 @@ class ArticleORM(TimestampMixin, Base):
     translated_content: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     translated_content_html: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     original_source_language: Mapped[Optional[str]] = mapped_column(String(16))
+    apply_status: Mapped[Optional[str]] = mapped_column(String(16), default="pending")
+    is_positive_policy: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
 
     source: Mapped["SourceORM"] = relationship(back_populates="articles")
     ai_results: Mapped[List["AIResultORM"]] = relationship(
@@ -154,7 +157,7 @@ class CrawlerJobRunORM(Base):
 
 
 class FinanceSyncLogORM(TimestampMixin, Base):
-    """财务数据同步日志"""
+    """财务数据同步日志。"""
 
     __tablename__ = "finance_sync_logs"
 
@@ -175,7 +178,7 @@ class FinanceSyncLogORM(TimestampMixin, Base):
 
 
 class FinanceRecordORM(TimestampMixin, Base):
-    """财务数据明细"""
+    """财务数据明细。"""
 
     __tablename__ = "finance_records"
 
@@ -205,7 +208,7 @@ class FinanceRecordORM(TimestampMixin, Base):
 
 
 class ConversationSessionORM(TimestampMixin, Base):
-    """会话持久化：摘要 + 窗口消息"""
+    """会话持久化：摘要 + 窗口消息。"""
 
     __tablename__ = "conversation_sessions"
 

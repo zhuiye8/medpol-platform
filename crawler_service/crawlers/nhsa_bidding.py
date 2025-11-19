@@ -1,4 +1,4 @@
-"""国家医保局-国内政策与动态爬虫。"""
+"""国家医保局 - 集中采购（医保招标采集）爬虫."""
 
 from __future__ import annotations
 
@@ -13,22 +13,26 @@ from ..base import BaseCrawler, CrawlResult
 from ..registry import registry
 
 
-class NHSADomesticCrawler(BaseCrawler):
-    """采集国家医保局官网“国内政策与动态”栏目。"""
+class NHSABiddingCrawler(BaseCrawler):
+    """采集国家医保局官网 国家组织/省级集中采购栏目."""
 
-    name = "nhsa_domestic"
-    label = "医保局爬虫"
+    name = "nhsa_bidding"
+    label = "国家医保局-集中采购"
     source_name = "国家医疗保障局"
-    category = ArticleCategory.DOMESTIC_POLICY
-    description = "国家医保局官网政策与动态列表"
-    start_urls = ["https://www.nhsa.gov.cn/col/col147/index.html"]
+    category = ArticleCategory.BIDDING
+    start_urls = [
+        # 默认使用国家组织集中采购栏目
+        "https://www.nhsa.gov.cn/col/col187/index.html",
+    ]
 
     def __init__(self, config: Dict | None = None) -> None:
         super().__init__(config)
         meta = self.config.meta
+        # 可指定 list_url 为省级栏目，如 col186
         self.list_url = meta.get("list_url") or self.start_urls[0]
         self.page_size = int(meta.get("page_size", 20))
         self.max_pages = int(meta.get("max_pages", 1))
+        self.source_label = meta.get("source_label") or "国家组织集中采购"
         self._client.headers.setdefault(
             "User-Agent",
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -46,8 +50,8 @@ class NHSADomesticCrawler(BaseCrawler):
             try:
                 results.append(self._build_result(entry))
             except Exception as exc:  # pylint: disable=broad-except
-                self.logger.warning("解析文章失败 url=%s err=%s", entry["url"], exc)
-        self.logger.info("医保局栏目采集 %s 条记录", len(results))
+                self.logger.warning("解析招采文章失败 url=%s err=%s", entry["url"], exc)
+        self.logger.info("集中采购采集 %s 条记录", len(results))
         return results
 
     def _fetch_listing_html(self) -> str:
@@ -99,6 +103,7 @@ class NHSADomesticCrawler(BaseCrawler):
         metadata = {
             "article_id": entry["article_id"],
             "category": self.category.value,
+            "source_label": self.source_label,
         }
         return CrawlResult(
             title=entry["title"],
@@ -128,4 +133,4 @@ class NHSADomesticCrawler(BaseCrawler):
             return datetime.utcnow()
 
 
-registry.register(NHSADomesticCrawler)
+registry.register(NHSABiddingCrawler)

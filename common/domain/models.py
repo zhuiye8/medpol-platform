@@ -14,8 +14,12 @@ class ArticleCategory(str, Enum):
     FDA_POLICY = "fda_policy"
     EMA_POLICY = "ema_policy"
     PMDA_POLICY = "pmda_policy"
+    BIDDING = "bidding"  # 医保招标采集（国家/省级集中采购）
+    LAWS = "laws"  # 法律法规
+    INSTITUTION = "institution"  # 中心制度
     PROJECT_APPLY = "project_apply"
-    DOMESTIC_POLICY = "domestic_policy"  # 国内政策与动态
+    CDE_TREND = "cde_trend"  # CDE 动态
+    INDUSTRY_TREND = "industry_trend"  # 行业动态
 
 
 class RawArticle(BaseModel):
@@ -43,9 +47,7 @@ class Source(BaseModel):
     base_url: HttpUrl = Field(..., description="来源根域名，便于监控与跳转")
     category: ArticleCategory = Field(..., description="来源所属类别，例：fda_policy")
     is_active: bool = Field(True, description="是否启用")
-    crawl_frequency_minutes: int = Field(
-        60, description="建议的采集频率，便于动态调度"
-    )
+    crawl_frequency_minutes: int = Field(60, description="建议采集频率，便于动态调整")
     meta: dict = Field(default_factory=dict, description="额外配置信息，如代理、凭证")
 
 
@@ -69,6 +71,12 @@ class Article(BaseModel):
     translated_content: Optional[str] = Field(None, description="翻译后纯文本")
     translated_content_html: Optional[str] = Field(None, description="翻译后的 HTML")
     original_source_language: Optional[str] = Field(None, description="原文语言代码")
+    apply_status: Optional[str] = Field(
+        None, description="项目申报状态：pending（未申报）/submitted（已申报）"
+    )
+    is_positive_policy: Optional[bool] = Field(
+        None, description="是否利好政策（AI 判定）"
+    )
 
 
 class AIResult(BaseModel):

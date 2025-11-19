@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Iterable, List, Optional
 
-from sqlalchemy import select
+from sqlalchemy import func, select, case
 from sqlalchemy.orm import Session
 from common.domain import ArticleCategory
 
@@ -55,6 +55,23 @@ class ArticleRepository:
         stmt = stmt.limit(limit)
         return list(self.session.scalars(stmt))
 
+    def paginate(
+        self,
+        *,
+        page: int = 1,
+        page_size: int = 20,
+        category: Optional[ArticleCategory] = None,
+    ) -> tuple[List[models.ArticleORM], int]:
+        stmt = select(models.ArticleORM).order_by(models.ArticleORM.publish_time.desc())
+        if category:
+            db_value = category.value if isinstance(category, ArticleCategory) else category
+            stmt = stmt.where(models.ArticleORM.category == db_value)
+        total = self.session.scalar(
+            select(func.count()).select_from(stmt.subquery())  # type: ignore[arg-type]
+        )
+        stmt = stmt.offset((page - 1) * page_size).limit(page_size)
+        return list(self.session.scalars(stmt)), int(total or 0)
+
     def list_without_summary(self, limit: int = 10) -> List[models.ArticleORM]:
         stmt = (
             select(models.ArticleORM)
@@ -86,6 +103,67 @@ class ArticleRepository:
         )
         return list(self.session.scalars(stmt))
 
+    def count_by_category(self, category: ArticleCategory) -> int:
+        db_value = category.value if isinstance(category, ArticleCategory) else category
+        stmt = select(func.count()).select_from(models.ArticleORM).where(
+            models.ArticleORM.category == db_value
+        )
+        return int(self.session.scalar(stmt) or 0)
+
+    def count_year_category(self, category: ArticleCategory, year: int) -> int:
+        db_value = category.value if isinstance(category, ArticleCategory) else category
+        stmt = (
+            select(func.count())
+            .select_from(models.ArticleORM)
+            .where(
+                models.ArticleORM.category == db_value,
+                func.extract("year", models.ArticleORM.publish_time) == year,
+            )
+        )
+        return int(self.session.scalar(stmt) or 0)
+
+    def count_positive_policy(self, category: ArticleCategory) -> int:
+        db_value = category.value if isinstance(category, ArticleCategory) else category
+        stmt = (
+            select(func.count())
+            .select_from(models.ArticleORM)
+            .where(
+                models.ArticleORM.category == db_value,
+                models.ArticleORM.is_positive_policy.is_(True),
+            )
+        )
+        return int(self.session.scalar(stmt) or 0)
+
+    def count_project_apply_stats(self, year: int) -> dict:
+        year_case = case(
+            (func.extract("year", models.ArticleORM.publish_time) == year, 1),
+            else_=0,
+        )
+        base = (
+            select(
+                models.ArticleORM.apply_status,
+                func.count().label("cnt"),
+                func.sum(year_case).label("year_cnt"),
+            )
+            .where(models.ArticleORM.category == ArticleCategory.PROJECT_APPLY.value)
+            .group_by(models.ArticleORM.apply_status)
+        )
+        rows = list(self.session.execute(base))
+        result = {
+            "pending_total": 0,
+            "submitted_total": 0,
+            "pending_year": 0,
+            "submitted_year": 0,
+        }
+        for status, cnt, year_cnt in rows:
+            if status == "pending":
+                result["pending_total"] = int(cnt or 0)
+                result["pending_year"] = int(year_cnt or 0)
+            elif status == "submitted":
+                result["submitted_total"] = int(cnt or 0)
+                result["submitted_year"] = int(year_cnt or 0)
+        return result
+
     def add(self, article: models.ArticleORM) -> None:
         self.session.add(article)
 
@@ -110,6 +188,18 @@ class AIResultRepository:
     def list_by_article(self, article_id: str) -> List[models.AIResultORM]:
         stmt = select(models.AIResultORM).where(models.AIResultORM.article_id == article_id)
         return list(self.session.scalars(stmt))
+
+    def latest_by_article_task(self, article_id: str, task_type: str) -> Optional[models.AIResultORM]:
+        stmt = (
+            select(models.AIResultORM)
+            .where(
+                models.AIResultORM.article_id == article_id,
+                models.AIResultORM.task_type == task_type,
+            )
+            .order_by(models.AIResultORM.created_at.desc())
+            .limit(1)
+        )
+        return self.session.scalars(stmt).first()
 
 
 class CrawlerJobRepository:

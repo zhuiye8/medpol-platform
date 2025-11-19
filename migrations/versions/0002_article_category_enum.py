@@ -17,8 +17,12 @@ article_category_enum = sa.Enum(
     "fda_policy",
     "ema_policy",
     "pmda_policy",
+    "bidding",
+    "laws",
+    "institution",
     "project_apply",
-    "domestic_policy",
+    "cde_trend",
+    "industry_trend",
     name="article_category",
 )
 

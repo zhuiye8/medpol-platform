@@ -6,6 +6,8 @@ import json
 import logging
 import os
 import uuid
+from datetime import datetime
+from pathlib import Path
 from typing import Optional
 
 from bs4 import BeautifulSoup
@@ -40,23 +42,32 @@ if os.getenv("DATABASE_URL"):
         print(f"[ai_processor] init session factory failed: {exc}")
         SESSION_FACTORY = None
 
+_JIESHAO = ""
+try:
+    _JIESHAO = Path("jieshao.md").read_text(encoding="utf-8", errors="ignore")
+except Exception:
+    _JIESHAO = ""
+
 
 def _invoke_llm(prompt: str, task_type: str, temperature: float = 0.2) -> str:
-    """
-    统一的 LLM 调用入口，使用 ProviderFactory（同对话接口），便于配置与回退一致。
-    """
+    """统一的 LLM 调用入口。"""
 
     try:
         bundle = provider_factory.get_client()
     except AIProviderError as exc:
         raise RuntimeError(f"AI Provider 初始化失败: {exc}")
 
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    base_context = (
+        f"当前日期：{today}。你在支持联环药业的内容处理，回答使用中文。"
+        + (f"\n公司简介：{_JIESHAO[:800]}" if _JIESHAO else "")
+    )
     system_prompt = {
-        "summary": "你是医药政策内容的中文摘要助手，回答必须简洁、客观、中文输出。",
-        "translation_check": "你是语言识别助手，判断文本是否需要翻译为中文，只回答 true 或 false。",
-        "translation": "你是精准中文翻译助手，保持 HTML 标签与格式不变，仅翻译可见文字，专业名词保留。",
-        "analysis": "你是要点提炼助手，输出规范 JSON，包括 key_points/risks/actions，每项1-3条，中文。",
-    }.get(task_type, "你是联环药业的内容处理助手，回答使用中文。")
+        "summary": base_context + " 你是医药政策内容的中文摘要助手，回答必须简洁、客观。",
+        "translation_check": base_context + " 你是语言识别助手，判断文本是否需要翻译为中文，只回答 true 或 false。",
+        "translation": base_context + " 你是精准中文翻译助手，保证 HTML 标签与格式不变，仅翻译可见文字，专业名词保留。",
+        "analysis": base_context + " 你是要点提炼助手，输出规范 JSON，包含 key_points/risks/actions/is_positive_policy。",
+    }.get(task_type, base_context + " 你是联环药业的内容处理助手。")
 
     response = bundle.client.chat.completions.create(
         model=bundle.model,
@@ -68,43 +79,41 @@ def _invoke_llm(prompt: str, task_type: str, temperature: float = 0.2) -> str:
     )
     return (response.choices[0].message.content or "").strip()
 
+
 def _generate_summary(text: str, title: str) -> str:
     prompt = (
-        "Generate a concise Chinese summary within 150 characters.\n\n"
-        f"Title: {title}\n\nBody (truncated):\n{text[:2000]}"
+        "请生成不超过 150 字的中文摘要。\n\n"
+        f"标题: {title}\n\n正文片段:\n{text[:2000]}"
     )
     return _invoke_llm(prompt, "summary").strip()
-
 
 
 def _ask_should_translate(text: str) -> bool:
     snippet = text[:1200]
     prompt = (
-        "Should this text be translated to Chinese for readers to understand? "
-        "Answer false if mainly Chinese or no need; otherwise true. "
-        "Only output true or false.\n\n"
-        f"Text:\n{snippet}"
+        "判断以下文本是否需要翻译成中文后再阅读。主要是中文则回答 false；需要翻译则回答 true。"
+        "只输出 true 或 false。\n\n"
+        f"文本：\n{snippet}"
     )
     answer = _invoke_llm(prompt, "translation_check").strip().lower()
     return answer.startswith("t")
 
 
-
 def _translate_html(html: str) -> str:
     prompt = (
-        "Translate the following HTML into Simplified Chinese. Keep all tags, attributes, line breaks, and images unchanged; "
-        "only translate visible text and output full HTML.\n\n"
+        "将以下 HTML 翻译为简体中文，保留所有标签、属性、换行与图片，仅翻译可见文字，输出完整 HTML。\n\n"
         f"{html}"
     )
     return _invoke_llm(prompt, "translation").strip()
 
 
-
 def _generate_analysis(text: str, title: str) -> Optional[dict]:
     prompt = (
-        "Read the content and output strict JSON: {\"key_points\":[], \"risks\":[], \"actions\":[]} \n"
-        "Each array 1-3 concise Chinese items. Do not wrap with backticks, output valid JSON only.\n\n"
-        f"Title: {title}\nBody: {text[:3000]}"
+        "请阅读内容并输出严格 JSON："
+        '{"key_points":[],"risks":[],"actions":[],"is_positive_policy":null} 。'
+        "key_points/risks/actions 各 1-3 条，中文简洁描述；is_positive_policy 是布尔，表示对医药企业/联环是否利好。"
+        "不要使用反引号，不要多余文字，只输出 JSON。\n\n"
+        f"标题: {title}\n正文: {text[:3000]}"
     )
     analysis_raw = _invoke_llm(prompt, "analysis")
     analysis, structured = format_analysis_content(analysis_raw)
@@ -195,6 +204,18 @@ def run_analysis_job(article_id: str) -> Optional[dict]:
         if not analysis:
             return None
         article.ai_analysis = analysis
+        # 写入利好标记
+        is_positive = None
+        if isinstance(analysis, dict):
+            is_positive = analysis.get("is_positive_policy")
+            if isinstance(is_positive, str):
+                if is_positive.lower().startswith("t"):
+                    is_positive = True
+                elif is_positive.lower().startswith("f"):
+                    is_positive = False
+            if is_positive in (True, False):
+                article.is_positive_policy = bool(is_positive)
+
         ai_repo.add(
             orm_models.AIResultORM(
                 id=str(uuid.uuid4()),
@@ -211,7 +232,7 @@ def run_analysis_job(article_id: str) -> Optional[dict]:
 
 @celery_app.task(name="ai_processor.process_summary", queue=AI_QUEUE)
 def process_summary(article_id: str) -> dict:
-    """Celery 任务入口。"""
+    """Celery 任务入口：摘要。"""
 
     summary = run_summary_job(article_id)
     return {"article_id": article_id, "summary": summary}

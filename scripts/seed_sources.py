@@ -1,4 +1,4 @@
-"""初始化示例来源配置。"""
+"""初始化示例来源配置，分类齐全版本."""
 
 from __future__ import annotations
 
@@ -31,6 +31,7 @@ def _insert(session, source: models.SourceORM, label: str) -> None:
 def main() -> None:
     session_factory = get_session_factory()
     with session_scope(session_factory) as session:
+        # 前沿动态
         _insert(
             session,
             models.SourceORM(
@@ -75,17 +76,18 @@ def main() -> None:
             "药渡云前沿动态（渲染）",
         )
 
+        # CDE 动态
         _insert(
             session,
             models.SourceORM(
-                id="src_nhsa_domestic",
-                name="国家医疗保障局",
-                label="国内政策与动态",
+                id="src_nhsa_cde",
+                name="国家医保局 - 政策与动态",
+                label="CDE 动态",
                 base_url="https://www.nhsa.gov.cn",
-                category=ArticleCategory.DOMESTIC_POLICY,
+                category=ArticleCategory.CDE_TREND,
                 is_active=True,
                 meta={
-                    "crawler_name": "nhsa_domestic",
+                    "crawler_name": "nhsa_cde",
                     "crawler_meta": {
                         "max_pages": 1,
                         "page_size": 20,
@@ -93,9 +95,143 @@ def main() -> None:
                     },
                 },
             ),
-            "国家医疗保障局",
+            "国家医保局 - 政策与动态",
         )
 
+        # 医保招标采集（国家/省级集中采购）
+        _insert(
+            session,
+            models.SourceORM(
+                id="src_nhsa_bidding_national",
+                name="国家医保局 - 国家组织集中采购",
+                label="国家集采",
+                base_url="https://www.nhsa.gov.cn",
+                category=ArticleCategory.BIDDING,
+                is_active=True,
+                meta={
+                    "crawler_name": "nhsa_bidding",
+                    "crawler_meta": {
+                        "max_pages": 1,
+                        "page_size": 20,
+                        "list_url": "https://www.nhsa.gov.cn/col/col187/index.html",
+                        "source_label": "国家组织集中采购",
+                    },
+                },
+            ),
+            "国家医保局 - 国家集中采购",
+        )
+
+        _insert(
+            session,
+            models.SourceORM(
+                id="src_nhsa_bidding_provincial",
+                name="国家医保局 - 省级集中采购",
+                label="省级集采",
+                base_url="https://www.nhsa.gov.cn",
+                category=ArticleCategory.BIDDING,
+                is_active=True,
+                meta={
+                    "crawler_name": "nhsa_bidding",
+                    "crawler_meta": {
+                        "max_pages": 1,
+                        "page_size": 20,
+                        "list_url": "https://www.nhsa.gov.cn/col/col186/index.html",
+                        "source_label": "省级集中采购",
+                    },
+                },
+            ),
+            "国家医保局 - 省级集中采购",
+        )
+
+        # 行业动态
+        _insert(
+            session,
+            models.SourceORM(
+                id="src_nhsa_industry",
+                name="国家医保局 - 地方工作动态",
+                label="行业动态",
+                base_url="https://www.nhsa.gov.cn",
+                category=ArticleCategory.INDUSTRY_TREND,
+                is_active=True,
+                meta={
+                    "crawler_name": "nhsa_industry",
+                    "crawler_meta": {
+                        "max_pages": 1,
+                        "page_size": 20,
+                        "list_url": "https://www.nhsa.gov.cn/col/col193/index.html",
+                    },
+                },
+            ),
+            "国家医保局 - 行业动态",
+        )
+
+        # 法律法规
+        _insert(
+            session,
+            models.SourceORM(
+                id="src_cde_law",
+                name="CDE 法律法规",
+                label="法律法规",
+                base_url="https://www.cde.org.cn",
+                category=ArticleCategory.LAWS,
+                is_active=True,
+                meta={
+                    "crawler_name": "cde_law",
+                    "crawler_meta": {
+                        "max_items": 50,
+                        "list_url": "https://www.cde.org.cn/main/policy/listpage/9f9c74c73e0f8f56a8bfbc646055026d",
+                    },
+                },
+            ),
+            "CDE 法律法规",
+        )
+
+        # 中心制度
+        _insert(
+            session,
+            models.SourceORM(
+                id="src_cde_institution",
+                name="CDE 中心制度",
+                label="中心制度",
+                base_url="https://www.cde.org.cn",
+                category=ArticleCategory.INSTITUTION,
+                is_active=True,
+                meta={
+                    "crawler_name": "cde_institution",
+                    "crawler_meta": {
+                        "max_items": 50,
+                        "list_url": "https://www.cde.org.cn/main/policy/listpage/369ac7cfeb67c6000c33f85e6f374044",
+                    },
+                },
+            ),
+            "CDE 中心制度",
+        )
+
+        # 项目申报（扬州）
+        _insert(
+            session,
+            models.SourceORM(
+                id="src_project_apply_yangzhou",
+                name="扬州项目申报",
+                label="项目申报",
+                base_url="https://kjj.yangzhou.gov.cn",
+                category=ArticleCategory.PROJECT_APPLY,
+                is_active=True,
+                meta={
+                    "crawler_name": "project_apply_yangzhou",
+                    "crawler_meta": {
+                        "max_items": 50,
+                        "list_urls": [
+                            "https://kjj.yangzhou.gov.cn/zfxxgk/fdzdgknr/tzgg/index.html",
+                            "https://gxj.yangzhou.gov.cn/zfxxgk/fdzdgknr/tzgg/index.html",
+                        ],
+                    },
+                },
+            ),
+            "扬州项目申报",
+        )
+
+        # FDA/EMA/PMDA
         _insert(
             session,
             models.SourceORM(
@@ -173,6 +309,8 @@ def main() -> None:
             ),
             "PMDA What's New",
         )
+
+    print("✅ 示例来源写入完毕")
 
 
 if __name__ == "__main__":

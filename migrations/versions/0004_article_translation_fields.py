@@ -14,9 +14,16 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column("articles", sa.Column("translated_content", sa.Text(), nullable=True))
-    # ensure existing rows have default None, new columns handled automatically
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    columns = [col["name"] for col in inspector.get_columns("articles")]
+    if "translated_content" not in columns:
+        op.add_column("articles", sa.Column("translated_content", sa.Text(), nullable=True))
 
 
 def downgrade() -> None:
-    op.drop_column("articles", "translated_content")
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    columns = [col["name"] for col in inspector.get_columns("articles")]
+    if "translated_content" in columns:
+        op.drop_column("articles", "translated_content")

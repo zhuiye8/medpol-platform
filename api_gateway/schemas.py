@@ -18,6 +18,8 @@ class ArticleItem(BaseModel):
     category: ArticleCategory
     tags: List[str]
     source_url: str
+    apply_status: Optional[str] = None
+    is_positive_policy: Optional[bool] = None
 
 
 class ArticleListData(BaseModel):
@@ -25,6 +27,7 @@ class ArticleListData(BaseModel):
     page: int
     page_size: int
     total: int
+    stats: Optional[Dict[str, Any]] = None
 
 
 class LogLine(BaseModel):
@@ -170,4 +173,6 @@ class ArticleDetailData(BaseModel):
     publish_time: datetime
     source_name: str
     original_source_language: Optional[str]
+    apply_status: Optional[str] = None
+    is_positive_policy: Optional[bool] = None
     ai_results: List[AIResultItem]
