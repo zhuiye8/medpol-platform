@@ -1,4 +1,4 @@
-"""一键运行采集-格式化-AI 流程的工具。"""
+"""一键运行采集、格式化与 AI 的流水线工具。"""
 
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ class PipelineResult:
 
 
 def _process_outbox_queue() -> OutboxStats:
-    """将 sample_data/outbox 中的文件落库，并生成调试副本。"""
+    """将 sample_data/outbox 中的文件落库，并在 normalized 目录生成调试副本。"""
 
     stats = OutboxStats()
     if not OUTBOX_DIR.exists():
@@ -63,10 +63,22 @@ def _process_outbox_queue() -> OutboxStats:
     return stats
 
 
-def run_full_pipeline(session: Optional[Session] = None, ai_limit: int = 50) -> PipelineResult:
-    """依次执行爬虫、outbox 落库、AI 三步骤，并返回统计。"""
+def run_full_pipeline(session: Optional[Session] = None, ai_limit: int | None = None) -> PipelineResult:
+    """依次执行爬虫、outbox 落库、AI 入队（默认无限制），并返回统计。"""
 
     crawled = run_active_crawlers(session=session)
+    outbox_stats = _process_outbox_queue()
+    ai_stats = enqueue_ai_jobs(limit=ai_limit)
+    return PipelineResult(crawled=crawled, outbox=outbox_stats, ai=ai_stats)
+
+
+def run_quick_pipeline(session: Optional[Session] = None, ai_limit: int | None = None) -> PipelineResult:
+    """
+    快速检测：每个爬虫只取 1 条，完整经过 formatter + AI 队列。
+    适合上线前自检，避免大规模入库。
+    """
+
+    crawled = run_active_crawlers(session=session, quick_mode=True)
     outbox_stats = _process_outbox_queue()
     ai_stats = enqueue_ai_jobs(limit=ai_limit)
     return PipelineResult(crawled=crawled, outbox=outbox_stats, ai=ai_stats)

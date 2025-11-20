@@ -1,4 +1,4 @@
-"""格式化服务：原始数据清洗、校验、去重，并可作为 Celery Worker 使用。"""
+"""Formatter service：清洗、去重、入库，并在入库后自动推送 AI 任务。"""
 
 from __future__ import annotations
 
@@ -12,13 +12,35 @@ from urllib.parse import urlparse
 from celery import Celery
 
 from common.domain import Article, RawArticle, ArticleCategory
+from common.utils.env import load_env
 from common.persistence.database import get_session_factory, session_scope
 from common.persistence import models as orm_models
 from common.persistence.repository import ArticleRepository, SourceRepository
 from .utils import apply_field_mapping, clean_html, normalize_text
 from .language import detect_language
 
+load_env()
 
+# AI 任务（入库后立即入队）
+try:
+    from ai_processor.worker import (
+        process_summary,
+        process_translation,
+        process_analysis,
+        process_title_translation,
+    )
+
+    AI_TASKS_AVAILABLE = True
+except Exception as exc:  # pragma: no cover - AI worker 未就绪时的兜底
+    process_summary = None  # type: ignore
+    process_translation = None  # type: ignore
+    process_analysis = None  # type: ignore
+    process_title_translation = None  # type: ignore
+    AI_TASKS_AVAILABLE = False
+    print(f"[formatter] AI 任务加载失败: {exc}")
+
+
+# 预加载 .env，确保 Celery/数据库配置就绪
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 FORMATTER_QUEUE = os.getenv("FORMATTER_QUEUE", "formatter")
 STATE_PATH = Path(os.getenv("FORMATTER_SEEN_PATH", "sample_data/state/formatter_seen.json"))
@@ -29,7 +51,7 @@ SESSION_FACTORY = None
 if DATABASE_URL:
     try:
         SESSION_FACTORY = get_session_factory()
-    except Exception as exc:  # pragma: no cover - 初始化失败时，仅记录
+    except Exception as exc:  # pragma: no cover - 初始化失败仅提示
         print(f"[formatter] init session factory failed: {exc}")
         SESSION_FACTORY = None
 
@@ -42,7 +64,7 @@ celery_app.conf.task_default_queue = FORMATTER_QUEUE
 
 
 class FormatterDeduper:
-    """简易内容去重器，按正文哈希去重。"""
+    """基于内容哈希的去重器。"""
 
     def __init__(self, path: Path) -> None:
         self.path = path
@@ -58,7 +80,7 @@ class FormatterDeduper:
             return set()
 
     def _save(self) -> None:
-        self.path.write_text(json.dumps(sorted(self.hashes)), encoding="utf-8")
+        self.path.write_text(json.dumps(sorted(self.hashes), ensure_ascii=False), encoding="utf-8")
 
     def is_duplicate(self, content_hash: str) -> bool:
         return content_hash in self.hashes
@@ -72,17 +94,28 @@ DEDUPER = FormatterDeduper(STATE_PATH)
 
 
 def _is_project_apply(content: str, title: str) -> bool:
-    """判断是否为项目申报类信息，关键词优先，兜底使用大模型判断。"""
+    """判断是否属于项目申报类，基于关键词粗判。"""
 
     text = (title + " " + content).lower()
-    keywords = ["申报", "项目", "征集", "遴选", "扶持", "资金", "奖励", "认定", "指南"]
-    if any(k in text for k in keywords):
-        return True
-    return False
+    keywords = ["申报", "项目", "指南", "遴选", "公告", "资金", "补助", "绩效", "指引"]
+    return any(k in text for k in keywords)
+
+
+def _infer_status(raw: RawArticle) -> Optional[str]:
+    """根据分类和元数据推断状态/子分类。"""
+
+    if raw.status:
+        return raw.status
+    meta_status = raw.metadata.get("status")
+    if meta_status:
+        return str(meta_status)
+    if raw.category == ArticleCategory.PROJECT_APPLY:
+        return "pending"
+    return None
 
 
 def _to_article(raw: RawArticle) -> Article:
-    """将原始载荷转换为标准 Article。"""
+    """将 RawArticle 转为标准 Article。"""
 
     cleaned_html = clean_html(raw.content_html)
     soup_text = normalize_text(clean_html(raw.content_html))
@@ -98,12 +131,14 @@ def _to_article(raw: RawArticle) -> Article:
         id=raw.article_id,
         source_id=raw.source_id or f"src_{raw.source_name}",
         title=raw.title,
+        translated_title=None,
         content_html=cleaned_html,
         content_text=soup_text,
         publish_time=raw.publish_time or raw.crawl_time,
         source_name=raw.source_name,
         source_url=raw.source_url,
         category=raw.category,
+        status=_infer_status(raw),
         tags=tags,
         crawl_time=raw.crawl_time,
         content_source=content_source,
@@ -112,15 +147,37 @@ def _to_article(raw: RawArticle) -> Article:
         translated_content=None,
         translated_content_html=None,
         original_source_language=original_language or "unknown",
-        apply_status="pending" if raw.category == ArticleCategory.PROJECT_APPLY else None,
         is_positive_policy=None,
     )
 
 
+def _enqueue_ai_tasks(article_id: str) -> None:
+    """将摘要/正文翻译/标题翻译/分析任务入队。"""
+
+    if not AI_TASKS_AVAILABLE or SESSION_FACTORY is None:
+        return
+    process_summary.delay(article_id)
+    process_translation.delay(article_id)
+    process_title_translation.delay(article_id)
+    process_analysis.delay(article_id)
+
+
+def _enqueue_ai_if_exists(article_id: str) -> None:
+    """仅在文章已存在数据库时入队 AI，避免重复内容漏跑 AI。"""
+
+    if not (AI_TASKS_AVAILABLE and SESSION_FACTORY):
+        return
+    with session_scope(SESSION_FACTORY) as session:
+        repo = ArticleRepository(session)
+        if not repo.get_by_id(article_id):
+            return
+    _enqueue_ai_tasks(article_id)
+
+
 def process_raw_article(raw_article: Dict) -> Dict:
     """
-    核心处理逻辑，可被 Celery 或离线脚本复用。
-    返回结构：
+    核心处理逻辑，可作为 Celery 任务或脚本复用。
+    返回结构:
         {
             "skipped": bool,
             "reason": Optional[str],
@@ -146,8 +203,10 @@ def process_raw_article(raw_article: Dict) -> Dict:
                 "reason": "not_project_apply",
                 "article_id": raw.article_id,
             }
+
     content_hash = hashlib.sha256(article.content_text.encode("utf-8")).hexdigest()
     if DEDUPER.is_duplicate(content_hash):
+        _enqueue_ai_if_exists(article.id)
         return {
             "skipped": True,
             "reason": "duplicate",
@@ -156,6 +215,7 @@ def process_raw_article(raw_article: Dict) -> Dict:
 
     DEDUPER.mark(content_hash)
     _persist_article(article)
+    _enqueue_ai_tasks(article.id)
     return {
         "skipped": False,
         "article": article.model_dump(mode="json"),
@@ -165,13 +225,13 @@ def process_raw_article(raw_article: Dict) -> Dict:
 
 @celery_app.task(name="formatter_service.normalize_article", queue=FORMATTER_QUEUE)
 def normalize_article(raw_article: dict) -> dict:
-    """Celery 任务入口。"""
+    """Celery 任务：清洗并入库。"""
 
     return process_raw_article(raw_article)
 
 
 def _persist_article(article: Article) -> None:
-    """将 Article 写入数据库（若配置了 DATABASE_URL）。"""
+    """将 Article 写入数据库（需要 DATABASE_URL）。"""
 
     if SESSION_FACTORY is None:
         return
@@ -202,12 +262,14 @@ def _persist_article(article: Article) -> None:
                 id=article.id,
                 source_id=article.source_id,
                 title=article.title,
+                translated_title=article.translated_title,
                 content_html=article.content_html,
                 content_text=article.content_text,
                 publish_time=article.publish_time,
                 source_name=article.source_name,
                 source_url=str(article.source_url),
                 category=article.category,
+                status=article.status,
                 tags=article.tags,
                 crawl_time=article.crawl_time,
                 content_source=article.content_source,
@@ -216,22 +278,23 @@ def _persist_article(article: Article) -> None:
                 translated_content=None,
                 translated_content_html=article.translated_content_html,
                 original_source_language=article.original_source_language,
-                apply_status=article.apply_status,
                 is_positive_policy=article.is_positive_policy,
             )
             article_repo.add(new_article)
 
 
 def _apply_article(target: orm_models.ArticleORM, article: Article) -> None:
-    """更新已存在的文章记录。"""
+    """更新已有记录的字段。"""
 
     target.title = article.title
+    target.translated_title = article.translated_title
     target.content_html = article.content_html
     target.content_text = article.content_text
     target.publish_time = article.publish_time
     target.source_name = article.source_name
     target.source_url = str(article.source_url)
     target.category = article.category
+    target.status = article.status
     target.tags = article.tags
     target.crawl_time = article.crawl_time
     target.content_source = article.content_source
@@ -240,7 +303,6 @@ def _apply_article(target: orm_models.ArticleORM, article: Article) -> None:
     target.translated_content = article.translated_content
     target.translated_content_html = article.translated_content_html
     target.original_source_language = article.original_source_language
-    target.apply_status = article.apply_status
     target.is_positive_policy = article.is_positive_policy
 
 

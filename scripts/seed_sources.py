@@ -1,4 +1,4 @@
-"""初始化示例来源配置，分类齐全版本."""
+"""初始化来源配置：与当前爬虫目录一致的全量配置。"""
 
 from __future__ import annotations
 
@@ -22,10 +22,10 @@ def _insert(session, source: models.SourceORM, label: str) -> None:
     session.add(source)
     try:
         session.flush()
-        print(f"✅ 已写入示例来源：{label}")
+        print(f"[ok] 写入示例来源：{label}")
     except IntegrityError:
         session.rollback()
-        print(f"ℹ️ {label} 已存在，跳过")
+        print(f"[skip] {label} 已存在，跳过")
 
 
 def main() -> None:
@@ -36,7 +36,7 @@ def main() -> None:
             session,
             models.SourceORM(
                 id="src_pharnex_frontier",
-                name="药渡云前沿动态",
+                name="药渡前沿",
                 label="前沿动态",
                 base_url="https://www.pharnexcloud.com",
                 category=ArticleCategory.FRONTIER,
@@ -47,36 +47,14 @@ def main() -> None:
                         "category_slug": "shiye",
                         "abbreviation": "qy",
                         "max_pages": 1,
-                        "page_size": 10,
-                    },
-                },
-            ),
-            "药渡云前沿动态（API）",
-        )
-
-        _insert(
-            session,
-            models.SourceORM(
-                id="src_pharnex_frontier_playwright",
-                name="药渡云前沿动态（渲染）",
-                label="前沿动态渲染",
-                base_url="https://www.pharnexcloud.com",
-                category=ArticleCategory.FRONTIER,
-                is_active=True,
-                meta={
-                    "crawler_name": "pharnex_frontier_playwright",
-                    "crawler_meta": {
-                        "category_slug": "shiye",
-                        "abbreviation": "qy",
-                        "max_pages": 1,
                         "page_size": 5,
                     },
                 },
             ),
-            "药渡云前沿动态（渲染）",
+            "药渡前沿",
         )
 
-        # CDE 动态
+        # CDE/医保局
         _insert(
             session,
             models.SourceORM(
@@ -95,15 +73,14 @@ def main() -> None:
                     },
                 },
             ),
-            "国家医保局 - 政策与动态",
+            "国家医保局 - CDE 动态",
         )
 
-        # 医保招标采集（国家/省级集中采购）
         _insert(
             session,
             models.SourceORM(
                 id="src_nhsa_bidding_national",
-                name="国家医保局 - 国家组织集中采购",
+                name="国家医保局 - 国家集采",
                 label="国家集采",
                 base_url="https://www.nhsa.gov.cn",
                 category=ArticleCategory.BIDDING,
@@ -118,14 +95,14 @@ def main() -> None:
                     },
                 },
             ),
-            "国家医保局 - 国家集中采购",
+            "国家医保局 - 国家集采",
         )
 
         _insert(
             session,
             models.SourceORM(
                 id="src_nhsa_bidding_provincial",
-                name="国家医保局 - 省级集中采购",
+                name="国家医保局 - 省级集采",
                 label="省级集采",
                 base_url="https://www.nhsa.gov.cn",
                 category=ArticleCategory.BIDDING,
@@ -140,10 +117,9 @@ def main() -> None:
                     },
                 },
             ),
-            "国家医保局 - 省级集中采购",
+            "国家医保局 - 省级集采",
         )
 
-        # 行业动态
         _insert(
             session,
             models.SourceORM(
@@ -165,7 +141,7 @@ def main() -> None:
             "国家医保局 - 行业动态",
         )
 
-        # 法律法规
+        # CDE 法规/制度
         _insert(
             session,
             models.SourceORM(
@@ -186,7 +162,6 @@ def main() -> None:
             "CDE 法律法规",
         )
 
-        # 中心制度
         _insert(
             session,
             models.SourceORM(
@@ -207,7 +182,7 @@ def main() -> None:
             "CDE 中心制度",
         )
 
-        # 项目申报（扬州）
+        # 扬州项目申报
         _insert(
             session,
             models.SourceORM(
@@ -231,7 +206,7 @@ def main() -> None:
             "扬州项目申报",
         )
 
-        # FDA/EMA/PMDA
+        # 海外监管
         _insert(
             session,
             models.SourceORM(
@@ -255,8 +230,8 @@ def main() -> None:
             session,
             models.SourceORM(
                 id="src_fda_press",
-                name="FDA 新闻稿",
-                label="FDA 新闻稿",
+                name="FDA 新闻",
+                label="FDA 新闻",
                 base_url="https://www.fda.gov",
                 category=ArticleCategory.FDA_POLICY,
                 is_active=True,
@@ -268,7 +243,7 @@ def main() -> None:
                     },
                 },
             ),
-            "FDA 新闻稿",
+            "FDA 新闻",
         )
 
         _insert(
@@ -310,7 +285,7 @@ def main() -> None:
             "PMDA What's New",
         )
 
-    print("✅ 示例来源写入完毕")
+    print("[done] 示例来源写入完毕")
 
 
 if __name__ == "__main__":

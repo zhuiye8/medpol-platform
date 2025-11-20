@@ -1,4 +1,4 @@
-"""国家医保局 - 集中采购（医保招标采集）爬虫."""
+"""国家医保局 - 采购/集采/政策类爬虫。"""
 
 from __future__ import annotations
 
@@ -14,25 +14,33 @@ from ..registry import registry
 
 
 class NHSABiddingCrawler(BaseCrawler):
-    """采集国家医保局官网 国家组织/省级集中采购栏目."""
+    """采集医保局网站的采购/集采通知，带子分类 status。"""
 
     name = "nhsa_bidding"
-    label = "国家医保局-集中采购"
-    source_name = "国家医疗保障局"
+    label = "国家医保局-采购"
+    source_name = "国家医保局"
     category = ArticleCategory.BIDDING
     start_urls = [
-        # 默认使用国家组织集中采购栏目
+        # 默认使用国家组织集采栏目 col187
         "https://www.nhsa.gov.cn/col/col187/index.html",
     ]
 
     def __init__(self, config: Dict | None = None) -> None:
         super().__init__(config)
         meta = self.config.meta
-        # 可指定 list_url 为省级栏目，如 col186
         self.list_url = meta.get("list_url") or self.start_urls[0]
         self.page_size = int(meta.get("page_size", 20))
         self.max_pages = int(meta.get("max_pages", 1))
-        self.source_label = meta.get("source_label") or "国家组织集中采购"
+        self.source_label = meta.get("source_label") or "国家组织集采"
+        # status: policy_updates / national_tenders / provincial_tenders
+        self.status = meta.get("status")
+        if not self.status:
+            if "col187" in self.list_url:
+                self.status = "national_tenders"
+            elif "col186" in self.list_url:
+                self.status = "provincial_tenders"
+            else:
+                self.status = "policy_updates"
         self._client.headers.setdefault(
             "User-Agent",
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -50,8 +58,8 @@ class NHSABiddingCrawler(BaseCrawler):
             try:
                 results.append(self._build_result(entry))
             except Exception as exc:  # pylint: disable=broad-except
-                self.logger.warning("解析招采文章失败 url=%s err=%s", entry["url"], exc)
-        self.logger.info("集中采购采集 %s 条记录", len(results))
+                self.logger.warning("采集招采失败 url=%s err=%s", entry["url"], exc)
+        self.logger.info("招采采集 %s 条记录", len(results))
         return results
 
     def _fetch_listing_html(self) -> str:
@@ -104,6 +112,7 @@ class NHSABiddingCrawler(BaseCrawler):
             "article_id": entry["article_id"],
             "category": self.category.value,
             "source_label": self.source_label,
+            "status": self.status,
         }
         return CrawlResult(
             title=entry["title"],

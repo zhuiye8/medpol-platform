@@ -1,4 +1,4 @@
-"""API Gateway 入口，FastAPI 实例。"""
+"""API Gateway FastAPI entrypoint."""
 
 from __future__ import annotations
 
@@ -7,17 +7,21 @@ import logging
 from logging.handlers import RotatingFileHandler
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from common.utils.env import load_env
+
+# 确保 .env 已加载，便于 uvicorn 直接运行
+load_env()
 
 from .routers import admin, articles, scheduler, ai_chat
 
 
 def _load_allowed_origins() -> tuple[list[str], bool]:
-    """解析允许的前端地址，若未配置则默认放开跨域。"""
+    """读取前端允许的域名，未配置则默认放开。"""
 
     raw = os.getenv("ADMIN_PORTAL_ORIGINS", "")
     origins = [item.strip() for item in raw.split(",") if item.strip()]
     if not origins:
-        # 默认开放公开 API，返回 "*" 并关闭凭据支持
+        # 默认开放，API 和 Admin Portal 联调更方便
         return ["*"], False
     return origins, True
 
@@ -25,7 +29,7 @@ def _load_allowed_origins() -> tuple[list[str], bool]:
 app = FastAPI(title="Med Policy Platform API", version="0.1.0")
 allow_origins, allow_credentials = _load_allowed_origins()
 
-# 配置文件日志（用于调试），如未设置 LOG_FILE_PATH 则仅输出到 stdout
+# 记录到文件日志（可选）；未设置 LOG_FILE_PATH 则输出到标准输出
 log_file = os.getenv("LOG_FILE_PATH")
 if log_file:
     handler = RotatingFileHandler(log_file, maxBytes=5 * 1024 * 1024, backupCount=2, encoding="utf-8")
@@ -54,6 +58,6 @@ app.include_router(ai_chat.router, prefix="/v1/ai", tags=["ai-chat"])
 
 @app.get("/healthz")
 async def health_check() -> dict:
-    """基础健康检查。"""
+    """存活检查。"""
 
     return {"code": 0, "msg": "success", "data": {"status": "ok"}}

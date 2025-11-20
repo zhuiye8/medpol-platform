@@ -1,4 +1,4 @@
-"""国家医保局 - 行业动态（地方工作动态）爬虫."""
+"""国家医保局 - 行业动态（工作动态/受理品种）。"""
 
 from __future__ import annotations
 
@@ -14,11 +14,11 @@ from ..registry import registry
 
 
 class NHSAIndustryCrawler(BaseCrawler):
-    """采集国家医保局官网“地方工作动态”栏目."""
+    """采集医保局发布的行业动态，带 status 区分。"""
 
     name = "nhsa_industry"
     label = "国家医保局-行业动态"
-    source_name = "国家医疗保障局"
+    source_name = "国家医保局"
     category = ArticleCategory.INDUSTRY_TREND
     start_urls = ["https://www.nhsa.gov.cn/col/col193/index.html"]
 
@@ -28,6 +28,8 @@ class NHSAIndustryCrawler(BaseCrawler):
         self.list_url = meta.get("list_url") or self.start_urls[0]
         self.page_size = int(meta.get("page_size", 20))
         self.max_pages = int(meta.get("max_pages", 1))
+        # status: operations / accepted_products
+        self.status = meta.get("status") or ("accepted_products" if "col194" in self.list_url else "operations")
         self._client.headers.setdefault(
             "User-Agent",
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -45,7 +47,7 @@ class NHSAIndustryCrawler(BaseCrawler):
             try:
                 results.append(self._build_result(entry))
             except Exception as exc:  # pylint: disable=broad-except
-                self.logger.warning("解析行业动态失败 url=%s err=%s", entry["url"], exc)
+                self.logger.warning("行业动态采集失败 url=%s err=%s", entry["url"], exc)
         self.logger.info("行业动态采集 %s 条记录", len(results))
         return results
 
@@ -98,6 +100,7 @@ class NHSAIndustryCrawler(BaseCrawler):
         metadata = {
             "article_id": entry["article_id"],
             "category": self.category.value,
+            "status": self.status,
         }
         return CrawlResult(
             title=entry["title"],

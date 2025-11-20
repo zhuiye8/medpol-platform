@@ -1,4 +1,4 @@
-"""SQLAlchemy ORM 模型定义。"""
+"""SQLAlchemy ORM models."""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ from sqlalchemy import (
     DateTime,
     Enum as SAEnum,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
@@ -31,7 +32,7 @@ ArticleCategoryEnum = SAEnum(
 
 
 class Base(DeclarativeBase):
-    """所有 ORM 的基类。"""
+    """ORM base."""
 
 
 class TimestampMixin:
@@ -44,7 +45,7 @@ class TimestampMixin:
 
 
 class SourceORM(TimestampMixin, Base):
-    """数据来源表。"""
+    """Source."""
 
     __tablename__ = "sources"
 
@@ -62,7 +63,7 @@ class SourceORM(TimestampMixin, Base):
 
 
 class ArticleORM(TimestampMixin, Base):
-    """规范化后的文章。"""
+    """Normalized article."""
 
     __tablename__ = "articles"
 
@@ -72,12 +73,14 @@ class ArticleORM(TimestampMixin, Base):
         ForeignKey("sources.id", ondelete="CASCADE"),
     )
     title: Mapped[str] = mapped_column(String(512))
+    translated_title: Mapped[Optional[str]] = mapped_column(String(512))
     content_html: Mapped[str] = mapped_column(Text)
     content_text: Mapped[str] = mapped_column(Text)
     publish_time: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     source_name: Mapped[str] = mapped_column(String(128))
     source_url: Mapped[str] = mapped_column(String(512))
     category: Mapped[ArticleCategory] = mapped_column(ArticleCategoryEnum, nullable=False)
+    status: Mapped[Optional[str]] = mapped_column(String(64))
     tags: Mapped[list] = mapped_column(JSON, default=list)
     crawl_time: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     content_source: Mapped[str] = mapped_column(String(32))
@@ -86,7 +89,6 @@ class ArticleORM(TimestampMixin, Base):
     translated_content: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     translated_content_html: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     original_source_language: Mapped[Optional[str]] = mapped_column(String(16))
-    apply_status: Mapped[Optional[str]] = mapped_column(String(16), default="pending")
     is_positive_policy: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
 
     source: Mapped["SourceORM"] = relationship(back_populates="articles")
@@ -95,8 +97,18 @@ class ArticleORM(TimestampMixin, Base):
     )
 
 
+Index(
+    "idx_articles_search",
+    ArticleORM.title,
+    ArticleORM.translated_title,
+    ArticleORM.content_text,
+)  # 多字段搜索索引
+Index("idx_articles_category", ArticleORM.category)
+Index("idx_articles_status", ArticleORM.status)
+
+
 class AIResultORM(TimestampMixin, Base):
-    """AI 处理结果。"""
+    """AI result."""
 
     __tablename__ = "ai_results"
 
@@ -114,7 +126,7 @@ class AIResultORM(TimestampMixin, Base):
 
 
 class CrawlerJobORM(TimestampMixin, Base):
-    """调度任务配置。"""
+    """Crawler job config."""
 
     __tablename__ = "crawler_jobs"
 
@@ -138,7 +150,7 @@ class CrawlerJobORM(TimestampMixin, Base):
 
 
 class CrawlerJobRunORM(Base):
-    """调度任务执行记录。"""
+    """Crawler job execution."""
 
     __tablename__ = "crawler_job_runs"
 
@@ -157,7 +169,7 @@ class CrawlerJobRunORM(Base):
 
 
 class FinanceSyncLogORM(TimestampMixin, Base):
-    """财务数据同步日志。"""
+    """Finance sync log."""
 
     __tablename__ = "finance_sync_logs"
 
@@ -178,7 +190,7 @@ class FinanceSyncLogORM(TimestampMixin, Base):
 
 
 class FinanceRecordORM(TimestampMixin, Base):
-    """财务数据明细。"""
+    """Finance record."""
 
     __tablename__ = "finance_records"
 
@@ -208,7 +220,7 @@ class FinanceRecordORM(TimestampMixin, Base):
 
 
 class ConversationSessionORM(TimestampMixin, Base):
-    """会话持久化：摘要 + 窗口消息。"""
+    """Conversation memory storage."""
 
     __tablename__ = "conversation_sessions"
 

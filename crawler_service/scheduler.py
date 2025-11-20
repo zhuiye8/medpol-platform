@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict, List, Optional
-
 import os
 import pkgutil
 from importlib import import_module
-from typing import List
+from typing import Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
@@ -23,24 +21,89 @@ from .registry import registry
 logger = logging.getLogger("crawler.scheduler")
 publisher = FormatterPublisher()
 DEFAULT_CONFIGS = [
+    # 药渡前沿
     CrawlerRuntimeConfig(
-        source_id="pharnex_frontier",
-        source_name="药渡云",
+        source_id="src_pharnex_frontier",
+        source_name="药渡前沿",
         crawler_name="pharnex_frontier",
         meta={"category_slug": "shiye", "abbreviation": "qy", "max_pages": 1, "page_size": 5},
     ),
+    # 医保局类
     CrawlerRuntimeConfig(
-        source_id="pharnex_frontier_playwright",
-        source_name="药渡云渲染",
-        crawler_name="pharnex_frontier_playwright",
-        meta={"category_slug": "shiye", "abbreviation": "qy", "max_pages": 1, "page_size": 5},
+        source_id="src_nhsa_bidding_national",
+        source_name="国家医保局-国家集采",
+        crawler_name="nhsa_bidding",
+        meta={
+            "max_pages": 1,
+            "page_size": 20,
+            "list_url": "https://www.nhsa.gov.cn/col/col187/index.html",
+            "source_label": "国家组织集中采购",
+        },
     ),
     CrawlerRuntimeConfig(
-        source_id="src_nhsa_domestic",
-        source_name="国家医疗保障局",
-        crawler_name="nhsa_domestic",
-        meta={"max_pages": 1, "page_size": 20},
+        source_id="src_nhsa_bidding_provincial",
+        source_name="国家医保局-省级集采",
+        crawler_name="nhsa_bidding",
+        meta={
+            "max_pages": 1,
+            "page_size": 20,
+            "list_url": "https://www.nhsa.gov.cn/col/col186/index.html",
+            "source_label": "省级集中采购",
+        },
     ),
+    CrawlerRuntimeConfig(
+        source_id="src_nhsa_cde",
+        source_name="国家医保局-CDE 动态",
+        crawler_name="nhsa_cde",
+        meta={
+            "max_pages": 1,
+            "page_size": 20,
+            "list_url": "https://www.nhsa.gov.cn/col/col147/index.html",
+        },
+    ),
+    CrawlerRuntimeConfig(
+        source_id="src_nhsa_industry",
+        source_name="国家医保局-行业动态",
+        crawler_name="nhsa_industry",
+        meta={
+            "max_pages": 1,
+            "page_size": 20,
+            "list_url": "https://www.nhsa.gov.cn/col/col193/index.html",
+        },
+    ),
+    # CDE 法规/制度
+    CrawlerRuntimeConfig(
+        source_id="src_cde_law",
+        source_name="CDE 法律法规",
+        crawler_name="cde_law",
+        meta={
+            "max_items": 50,
+            "list_url": "https://www.cde.org.cn/main/policy/listpage/9f9c74c73e0f8f56a8bfbc646055026d",
+        },
+    ),
+    CrawlerRuntimeConfig(
+        source_id="src_cde_institution",
+        source_name="CDE 中心制度",
+        crawler_name="cde_institution",
+        meta={
+            "max_items": 50,
+            "list_url": "https://www.cde.org.cn/main/policy/listpage/369ac7cfeb67c6000c33f85e6f374044",
+        },
+    ),
+    # 扬州项目申报
+    CrawlerRuntimeConfig(
+        source_id="src_project_apply_yangzhou",
+        source_name="扬州项目申报",
+        crawler_name="project_apply_yangzhou",
+        meta={
+            "max_items": 50,
+            "list_urls": [
+                "https://kjj.yangzhou.gov.cn/zfxxgk/fdzdgknr/tzgg/index.html",
+                "https://gxj.yangzhou.gov.cn/zfxxgk/fdzdgknr/tzgg/index.html",
+            ],
+        },
+    ),
+    # 海外监管
     CrawlerRuntimeConfig(
         source_id="src_fda_guidance",
         source_name="FDA 新增指南",
@@ -49,7 +112,7 @@ DEFAULT_CONFIGS = [
     ),
     CrawlerRuntimeConfig(
         source_id="src_fda_press",
-        source_name="FDA 新闻稿",
+        source_name="FDA 新闻",
         crawler_name="fda_press",
         meta={"max_pages": 2, "max_items": 20},
     ),
@@ -129,15 +192,41 @@ def run_crawler_config(runtime_config: CrawlerRuntimeConfig) -> List[RawArticle]
     return articles
 
 
-def run_active_crawlers(session: Session | None = None) -> int:
-    """运行所有可用配置，返回总条数。"""
+def _apply_quick_meta(meta: Dict) -> Dict:
+    """快速检测模式下，强制每个爬虫最多抓 1 条，避免放量。"""
+
+    new_meta = dict(meta or {})
+    new_meta["page_size"] = 1
+    new_meta["max_pages"] = 1
+    new_meta["max_items"] = 1
+    new_meta["max_records"] = 1
+    return new_meta
+
+
+def run_active_crawlers(session: Session | None = None, quick_mode: bool = False) -> int:
+    """运行所有可用配置，返回总条数；单个爬虫失败时记录错误并继续。"""
 
     _load_crawlers()
     configs = iter_configs(session=session, fallback=DEFAULT_CONFIGS)
     total = 0
     for cfg in configs:
-        articles = run_crawler_config(cfg)
-        total += len(articles)
+        runtime_cfg = cfg
+        if quick_mode:
+            runtime_cfg = CrawlerRuntimeConfig(
+                source_id=cfg.source_id,
+                source_name=cfg.source_name,
+                crawler_name=cfg.crawler_name,
+                meta=_apply_quick_meta(cfg.meta),
+            )
+        try:
+            articles = run_crawler_config(runtime_cfg)
+            total += len(articles)
+        except KeyError as exc:
+            logger.error("跳过未注册的爬虫: %s", exc)
+            continue
+        except Exception:  # pylint: disable=broad-except
+            logger.exception("Crawler 运行失败，已跳过: %s", runtime_cfg.crawler_name)
+            continue
     return total
 
 

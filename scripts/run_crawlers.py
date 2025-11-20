@@ -12,9 +12,11 @@ if str(ROOT) not in sys.path:
 
 from crawler_service.scheduler import run_active_crawlers  # noqa: E402
 from common.persistence.database import get_session_factory, session_scope  # noqa: E402
+from common.utils.env import load_env  # noqa: E402
 
 
 def main():
+    load_env()
     total = 0
     if os.getenv("DATABASE_URL"):
         session_factory = get_session_factory()

@@ -71,14 +71,13 @@ class FDAGuidanceCrawler(BaseCrawler):
         title = link_tag.get_text(strip=True) if link_tag else cols[1].get_text(strip=True)
         href = link_tag.get("href") if link_tag else ""
         detail_url = urljoin(self.list_url, href)
-        status = cols[2].get_text(strip=True)
         date_text = cols[3].get_text(strip=True)
         publish_time = self._parse_date(date_text)
 
         detail_html, raw_html = self._fetch_detail(detail_url)
         metadata = {
             "topic": topic,
-            "status": status,
+            "guidance_status": cols[2].get_text(strip=True),
             "detail_url": detail_url,
         }
         return CrawlResult(

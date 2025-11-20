@@ -8,6 +8,7 @@ import {
   createJob,
   deleteJob,
   runPipeline,
+  runPipelineQuick,
   fetchCeleryHealth,
   resetPipelineData,
 } from "@/services/scheduler";
@@ -76,5 +77,6 @@ export function useScheduler() {
     refreshCelery: loadCelery,
     resetData,
     lastReset,
+    runPipelineQuick,
   };
 }

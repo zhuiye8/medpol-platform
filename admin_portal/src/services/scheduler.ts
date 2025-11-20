@@ -14,6 +14,7 @@ interface RunsResponse extends Envelope<{ items: CrawlerJobRun[] }> {}
 interface PipelineResponse extends Envelope<PipelineRunResult> {}
 interface CeleryResponse extends Envelope<CeleryHealth> {}
 interface ResetResponse extends Envelope<ResetResult> {}
+interface QuickPipelineResponse extends Envelope<PipelineRunResult> {}
 
 export async function fetchCrawlerMeta(): Promise<CrawlerMeta[]> {
   const resp = await apiRequest<Envelope<CrawlerMeta[]>>("/v1/crawlers/meta");
@@ -65,6 +66,11 @@ export async function deleteJob(jobId: string): Promise<void> {
 
 export async function runPipeline(): Promise<PipelineRunResult> {
   const resp = await apiRequest<PipelineResponse>("/v1/pipeline/run", { method: "POST" });
+  return resp.data;
+}
+
+export async function runPipelineQuick(): Promise<PipelineRunResult> {
+  const resp = await apiRequest<QuickPipelineResponse>("/v1/pipeline/quick-run", { method: "POST" });
   return resp.data;
 }
 

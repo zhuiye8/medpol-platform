@@ -32,7 +32,7 @@ from scheduler_service.job_runner import (
     execute_job_once,
 )
 from crawler_service.scheduler import list_available_crawlers
-from scheduler_service.pipeline import run_full_pipeline
+from scheduler_service.pipeline import run_full_pipeline, run_quick_pipeline
 from formatter_service.worker import celery_app as formatter_celery
 from scripts.reset_data import reset_all, DEFAULT_DIRS
 from common.utils.config import get_settings
@@ -262,6 +262,28 @@ def delete_job(job_id: str, db: Session = Depends(get_db_session)) -> Envelope[d
 @router.post("/pipeline/run", response_model=Envelope[PipelineRunData])
 def run_pipeline(db: Session = Depends(get_db_session)) -> Envelope[PipelineRunData]:
     result = run_full_pipeline(session=db)
+    data = PipelineRunData(
+        crawled=result.crawled,
+        outbox_files=result.outbox.files,
+        outbox_processed=result.outbox.processed,
+        outbox_skipped=result.outbox.skipped,
+        ai_summary_pending=result.ai.summary_pending,
+        ai_summary_enqueued=result.ai.summary_enqueued,
+        ai_translation_pending=result.ai.translation_pending,
+        ai_translation_enqueued=result.ai.translation_enqueued,
+        ai_analysis_pending=result.ai.analysis_pending,
+        ai_analysis_enqueued=result.ai.analysis_enqueued,
+    )
+    return Envelope(code=0, msg="success", data=data)
+
+
+@router.post("/pipeline/quick-run", response_model=Envelope[PipelineRunData])
+def run_pipeline_quick(db: Session = Depends(get_db_session)) -> Envelope[PipelineRunData]:
+    """
+    快速检测：每个爬虫抓 1 条，完整走 formatter + AI。
+    """
+
+    result = run_quick_pipeline(session=db)
     data = PipelineRunData(
         crawled=result.crawled,
         outbox_files=result.outbox.files,

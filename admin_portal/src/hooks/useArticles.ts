@@ -4,6 +4,8 @@ import type { Article, ArticleCategory } from "@/types/api";
 
 interface UseArticlesOptions {
   category?: ArticleCategory;
+  status?: string;
+  q?: string;
   pageSize?: number;
   autoRefreshMs?: number;
 }
@@ -26,7 +28,7 @@ const defaultState: ArticleState = {
 };
 
 export function useArticles(options: UseArticlesOptions = {}) {
-  const { category, pageSize = 20, autoRefreshMs = 0 } = options;
+  const { category, status, q, pageSize = 20, autoRefreshMs = 0 } = options;
   const [state, setState] = useState<ArticleState>(defaultState);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -46,6 +48,8 @@ export function useArticles(options: UseArticlesOptions = {}) {
           page: 1,
           pageSize,
           category,
+          status,
+          q,
         });
         setState({
           items: response.data.items,
@@ -67,7 +71,7 @@ export function useArticles(options: UseArticlesOptions = {}) {
         }));
       }
     },
-    [category, pageSize],
+    [category, status, q, pageSize],
   );
 
   useEffect(() => {

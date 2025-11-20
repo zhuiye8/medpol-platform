@@ -1,4 +1,4 @@
-"""将 CrawlResult 转换为 RawArticle 并推送到消息队列。"""
+"""将 CrawlResult 转为 RawArticle 并投递格式化队列。"""
 
 from __future__ import annotations
 
@@ -13,11 +13,15 @@ from typing import List
 from celery import Celery
 
 from common.domain import RawArticle, ArticleCategory
+from common.utils.env import load_env
 
 from .base import BaseCrawler, CrawlResult
 
 
 logger = logging.getLogger("crawler.dispatcher")
+
+# 预加载 .env，确保 REDIS_URL/FORMATTER_QUEUE 能读取
+load_env()
 REDIS_URL = os.getenv("REDIS_URL")
 FORMATTER_QUEUE = os.getenv("FORMATTER_QUEUE", "formatter")
 
@@ -31,7 +35,7 @@ if REDIS_URL:
 
 
 class RawArticleBuilder:
-    """负责将 CrawlResult 转换为 RawArticle。"""
+    """负责将 CrawlResult 构造成 RawArticle。"""
 
     def __init__(self, crawler: BaseCrawler) -> None:
         self.crawler = crawler
@@ -69,11 +73,12 @@ class RawArticleBuilder:
             publish_time=result.publish_time,
             crawl_time=crawl_time,
             content_source=content_source,
+            status=metadata.get("status"),
             metadata=metadata,
         )
 
     def _resolve_category(self, value) -> ArticleCategory:
-        """从 metadata 或 crawler 默认解析分类为合法枚举。"""
+        """从 metadata 或 crawler 默认解析分类。"""
 
         if isinstance(value, ArticleCategory):
             return value
@@ -86,7 +91,7 @@ class RawArticleBuilder:
 
 
 class FormatterPublisher:
-    """向 formatter_service 发布任务，失败时写入本地。"""
+    """负责投递到 formatter_service；失败时写本地 outbox。"""
 
     def __init__(self) -> None:
         self._celery = celery_app
@@ -104,7 +109,7 @@ class FormatterPublisher:
                 )
                 return
             except Exception as exc:  # pylint: disable=broad-except
-                logger.warning("Celery 发送失败，写入本地队列: %s", exc)
+                logger.warning("Celery 投递失败，写入本地 outbox: %s", exc)
         self._write_fallback(payload)
 
     def _write_fallback(self, payload: dict) -> None:
@@ -116,7 +121,7 @@ class FormatterPublisher:
 def dispatch_results(
     crawler: BaseCrawler, results: List[CrawlResult], publisher: FormatterPublisher
 ) -> List[RawArticle]:
-    """辅助函数：将结果批量转换并发布。"""
+    """批量转换并投递爬虫结果。"""
 
     builder = RawArticleBuilder(crawler)
     articles: List[RawArticle] = []

@@ -1,10 +1,10 @@
-"""AI 分析结果的格式化与兜底逻辑。"""
+"""Format and normalize AI analysis outputs."""
 
 from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, Tuple
 
 
 logger = logging.getLogger("ai_processor.analysis")
@@ -27,19 +27,10 @@ def _strip_code_fences(text: str) -> str:
     return stripped
 
 
-def _ensure_list(value: Any) -> List[str]:
-    if isinstance(value, list):
-        return [str(item).strip() for item in value if str(item).strip()]
-    if isinstance(value, str) and value.strip():
-        return [value.strip()]
-    return []
-
-
 def format_analysis_content(content: str) -> Tuple[Dict[str, Any], bool]:
     """
-    对 LLM 输出进行格式化：
-    - 成功时返回结构化 dict（含 key_points/risks/actions/is_positive_policy）
-    - 若解析失败，返回带 raw_text 的兜底结果
+    将 LLM 输出整理为 {content, is_positive_policy}。
+    返回 (result, structured)；structured=False 时 result 仅包含 raw_text。
     """
 
     raw = content.strip()
@@ -48,22 +39,14 @@ def format_analysis_content(content: str) -> Tuple[Dict[str, Any], bool]:
         data = json.loads(cleaned)
         if not isinstance(data, dict):
             raise ValueError("analysis output is not dict")
-        positive = data.get("is_positive_policy")
-        if isinstance(positive, str):
-            positive = positive.lower().startswith("t")
-        normalized = {
-            "structured": True,
-            "key_points": _ensure_list(data.get("key_points")),
-            "risks": _ensure_list(data.get("risks")),
-            "actions": _ensure_list(data.get("actions")),
-            "is_positive_policy": positive if isinstance(positive, bool) else None,
+        result = {
+            "content": data.get("content") or raw,
+            "is_positive_policy": data.get("is_positive_policy"),
         }
-        if not any(normalized[key] for key in ("key_points", "risks", "actions")):
-            raise ValueError("empty analysis data")
-        return normalized, True
+        return result, True
     except Exception as exc:  # pylint: disable=broad-except
-        logger.warning("解析 AI 分析失败，将保存原始文本: %s", exc)
+        logger.warning("解析 AI 解读失败，返回原始文本: %s", exc)
         return {
-            "structured": False,
-            "raw_text": raw,
+            "content": raw,
+            "is_positive_policy": None,
         }, False

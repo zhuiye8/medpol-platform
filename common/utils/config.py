@@ -1,4 +1,4 @@
-"""统一配置加载，兼容 .env 与环境变量。"""
+"""Settings loader with .env support."""
 
 from functools import lru_cache
 from typing import Optional
@@ -8,40 +8,37 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """平台级配置项。"""
+    """Platform configuration."""
 
-    database_url: str = Field(..., env="DATABASE_URL")
-    redis_url: str = Field(..., env="REDIS_URL")
+    database_url: str = Field(..., validation_alias="DATABASE_URL")
+    redis_url: str = Field(..., validation_alias="REDIS_URL")
 
-    openai_api_key: Optional[str] = Field(None, env="OPENAI_API_KEY")
-    openai_base_url: str = Field("https://api.openai.com/v1", env="OPENAI_BASE_URL")
-    openai_model: str = Field("gpt-4o-mini", env="OPENAI_MODEL")
+    openai_api_key: Optional[str] = Field(default=None, validation_alias="OPENAI_API_KEY")
+    openai_base_url: str = Field(default="https://api.openai.com/v1", validation_alias="OPENAI_BASE_URL")
+    openai_model: str = Field(default="gpt-4o-mini", validation_alias="OPENAI_MODEL")
 
-    deepseek_api_key: Optional[str] = Field(None, env="DEEPSEEK_API_KEY")
-    deepseek_base_url: str = Field("https://api.deepseek.com/v1", env="DEEPSEEK_BASE_URL")
-    deepseek_model: str = Field("deepseek-chat", env="DEEPSEEK_MODEL")
+    deepseek_api_key: Optional[str] = Field(default=None, validation_alias="DEEPSEEK_API_KEY")
+    deepseek_base_url: str = Field(default="https://api.deepseek.com/v1", validation_alias="DEEPSEEK_BASE_URL")
+    deepseek_model: str = Field(default="deepseek-chat", validation_alias="DEEPSEEK_MODEL")
 
-    ai_primary: str = Field("openai", env="AI_PRIMARY")
-    ai_fallback: Optional[str] = Field("deepseek", env="AI_FALLBACK")
+    ai_primary: str = Field(default="openai", validation_alias="AI_PRIMARY")
+    ai_fallback: Optional[str] = Field(default="deepseek", validation_alias="AI_FALLBACK")
 
-    # 财务API配置
-    finance_api_base_url: str = Field("http://ailianhuan.xyz:8333", env="FINANCE_API_BASE_URL")
-    finance_api_timeout: float = Field(30.0, env="FINANCE_API_TIMEOUT")
+    finance_api_base_url: str = Field(default="http://ailianhuan.xyz:8333", validation_alias="FINANCE_API_BASE_URL")
+    finance_api_timeout: float = Field(default=30.0, validation_alias="FINANCE_API_TIMEOUT")
     finance_data_endpoint: str = Field(
-        "http://ailianhuan.xyz:8333/financeDate/dataList",
-        env="FINANCE_DATA_ENDPOINT",
+        default="http://ailianhuan.xyz:8333/financeDate/dataList",
+        validation_alias="FINANCE_DATA_ENDPOINT",
     )
 
-    # AI对话配置
-    ai_chat_model: str = Field("gpt-4", env="AI_CHAT_MODEL")
-    ai_router_model: Optional[str] = Field(None, env="AI_ROUTER_MODEL")
+    ai_chat_model: str = Field(default="gpt-4", validation_alias="AI_CHAT_MODEL")
+    ai_router_model: Optional[str] = Field(default=None, validation_alias="AI_ROUTER_MODEL")
 
-    # 记忆配置
-    memory_ttl_minutes: int = Field(60, env="MEMORY_TTL_MINUTES")
-    memory_window: int = Field(6, env="MEMORY_WINDOW")
-    memory_summary_threshold: int = Field(10, env="MEMORY_SUMMARY_THRESHOLD")
-    memory_summary_model: Optional[str] = Field(None, env="MEMORY_SUMMARY_MODEL")
-    memory_enable_stagea_cache: bool = Field(False, env="MEMORY_ENABLE_STAGEA_CACHE")
+    memory_ttl_minutes: int = Field(default=60, validation_alias="MEMORY_TTL_MINUTES")
+    memory_window: int = Field(default=6, validation_alias="MEMORY_WINDOW")
+    memory_summary_threshold: int = Field(default=10, validation_alias="MEMORY_SUMMARY_THRESHOLD")
+    memory_summary_model: Optional[str] = Field(default=None, validation_alias="MEMORY_SUMMARY_MODEL")
+    memory_enable_stagea_cache: bool = Field(default=False, validation_alias="MEMORY_ENABLE_STAGEA_CACHE")
 
     model_config = SettingsConfigDict(
         case_sensitive=False,
@@ -53,6 +50,6 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    """懒加载配置，避免重复读取。"""
+    """Return cached settings instance."""
 
     return Settings()

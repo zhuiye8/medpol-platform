@@ -8,10 +8,7 @@ import type {
 } from "@/types/api";
 
 const DEFAULT_BASE = "http://localhost:8000";
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || DEFAULT_BASE).replace(
-  /\/$/,
-  "",
-);
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || DEFAULT_BASE).replace(/\/$/, "");
 
 export type RequestOptions = RequestInit & { query?: Record<string, string | number | undefined> };
 
@@ -19,7 +16,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   const url = new URL(path, API_BASE_URL);
   if (options.query) {
     Object.entries(options.query).forEach(([key, value]) => {
-      if (value === undefined || value === null) {
+      if (value === undefined || value === null || value === "") {
         return;
       }
       url.searchParams.set(key, String(value));
@@ -42,12 +39,16 @@ export async function fetchArticles(params?: {
   page?: number;
   pageSize?: number;
   category?: ArticleCategory;
+  status?: string;
+  q?: string;
 }): Promise<ArticlesResponse> {
   return apiRequest<ArticlesResponse>("/v1/articles/", {
     query: {
       page: params?.page ?? 1,
       page_size: params?.pageSize ?? 20,
       category: params?.category,
+      status: params?.status,
+      q: params?.q,
     },
   });
 }

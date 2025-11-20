@@ -1,4 +1,4 @@
-"""文章查询路由，实现统一响应壳。"""
+"""Article query routes using the new unified structure."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from common.domain import ArticleCategory
 from common.persistence.repository import ArticleRepository, AIResultRepository
 from ..deps import get_db_session
-from ..schemas import ArticleItem, ArticleListData, Envelope, ArticleDetailData, AIResultItem
+from ..schemas import ArticleItem, ArticleListData, Envelope, ArticleDetailData, AIResultItem, AIAnalysisData
 
 
 router = APIRouter()
@@ -20,24 +20,27 @@ async def list_articles(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     category: ArticleCategory | None = Query(None),
+    status: str | None = Query(None, description="子分类/状态筛选"),
+    q: str | None = Query(None, description="模糊搜索"),
     db: Session = Depends(get_db_session),
 ) -> Envelope[ArticleListData]:
-    """查询文章列表，支持简单分页与分类过滤。"""
+    """查询文章列表，支持分类、状态与模糊搜索。"""
 
     repo = ArticleRepository(db)
-    articles, total = repo.paginate(page=page, page_size=page_size, category=category)
+    articles, total = repo.paginate(page=page, page_size=page_size, category=category, status=status, q=q)
 
     items = [
         ArticleItem(
             id=a.id,
             title=a.title,
+            translated_title=a.translated_title,
             summary=a.summary,
             publish_time=a.publish_time,
             source_name=a.source_name,
             category=a.category,
+            status=a.status,
             tags=a.tags,
             source_url=a.source_url,
-            apply_status=a.apply_status,
             is_positive_policy=a.is_positive_policy,
         )
         for a in articles
@@ -75,18 +78,28 @@ async def get_article_detail(article_id: str, db: Session = Depends(get_db_sessi
     ai_repo = AIResultRepository(db)
     ai_results = ai_repo.list_by_article(article_id)
 
+    ai_analysis = None
+    if isinstance(article.ai_analysis, dict):
+        ai_analysis = AIAnalysisData(
+            content=article.ai_analysis.get("content"),
+            is_positive_policy=article.ai_analysis.get("is_positive_policy"),
+        )
+
     data = ArticleDetailData(
         id=article.id,
         title=article.title,
+        translated_title=article.translated_title,
         content_html=article.content_html,
         translated_content=article.translated_content,
         translated_content_html=article.translated_content_html,
-        ai_analysis=article.ai_analysis,
+        ai_analysis=ai_analysis,
         summary=article.summary,
         publish_time=article.publish_time,
         source_name=article.source_name,
+        source_url=article.source_url,
+        category=article.category,
+        status=article.status,
         original_source_language=article.original_source_language,
-        apply_status=article.apply_status,
         is_positive_policy=article.is_positive_policy,
         ai_results=[
             AIResultItem(
@@ -105,7 +118,7 @@ async def get_article_detail(article_id: str, db: Session = Depends(get_db_sessi
 
 @router.get("/stats/policies", response_model=Envelope[dict])
 async def policy_stats(db: Session = Depends(get_db_session)) -> Envelope[dict]:
-    """返回 FDA/EMA/PMDA 分类的总数/当年/利好统计。"""
+    """统计 FDA/EMA/PMDA 政策数量/当年/利好数。"""
 
     repo = ArticleRepository(db)
     year = datetime.utcnow().year
@@ -121,7 +134,7 @@ async def policy_stats(db: Session = Depends(get_db_session)) -> Envelope[dict]:
 
 @router.get("/stats/project_apply", response_model=Envelope[dict])
 async def project_apply_stats(db: Session = Depends(get_db_session)) -> Envelope[dict]:
-    """项目申报统计：未申报/已申报及当年。"""
+    """项目申报统计。"""
 
     repo = ArticleRepository(db)
     year = datetime.utcnow().year
@@ -131,11 +144,11 @@ async def project_apply_stats(db: Session = Depends(get_db_session)) -> Envelope
 
 @router.post("/project_apply/{article_id}/mark_submitted", response_model=Envelope[dict])
 async def mark_project_submitted(article_id: str, db: Session = Depends(get_db_session)) -> Envelope[dict]:
-    """将项目申报状态标记为已申报。"""
+    """将项目申报状态标记为 submitted。"""
 
     repo = ArticleRepository(db)
     article = repo.get_by_id(article_id)
     if not article or article.category != ArticleCategory.PROJECT_APPLY:
         raise HTTPException(status_code=404, detail="项目申报文章不存在")
-    article.apply_status = "submitted"
-    return Envelope(code=0, msg="success", data={"article_id": article_id, "apply_status": "submitted"})
+    article.status = "submitted"
+    return Envelope(code=0, msg="success", data={"article_id": article_id, "status": "submitted"})

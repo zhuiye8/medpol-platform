@@ -5,10 +5,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from api_gateway.main import app
-from api_gateway.deps import get_session_factory_cached
 from common.persistence import models
-from common.persistence.repository import ArticleRepository, SourceRepository
-from common.domain import Article, ArticleCategory
+from common.domain import ArticleCategory
 
 
 @pytest.fixture
@@ -39,13 +37,15 @@ def test_list_articles(client, db_session):
     article = models.ArticleORM(
         id="art-demo",
         source_id="src-demo",
-        title="测试文章",
-        content_html="<p>内容</p>",
-        content_text="内容",
+        title="Demo Title",
+        translated_title="Demo 标题",
+        content_html="<p>正文</p>",
+        content_text="正文",
         publish_time=now,
         source_name="Demo Source",
         source_url="https://example.com/1",
         category=ArticleCategory.FRONTIER,
+        status=None,
         tags=["demo"],
         crawl_time=now,
         content_source="web_page",
@@ -59,6 +59,9 @@ def test_list_articles(client, db_session):
     data = response.json()
     assert data["code"] == 0
     assert len(data["data"]["items"]) == 1
+    item = data["data"]["items"][0]
+    assert item["status"] is None
+    assert item["translated_title"] == "Demo 标题"
 
 
 def test_fetch_logs(client, tmp_path, monkeypatch):
@@ -122,20 +125,22 @@ def test_article_detail(client, db_session):
         id="art-detail",
         source_id="src-detail",
         title="Detail Article",
+        translated_title="详情标题",
         content_html="<p>原文</p>",
         content_text="原文",
         publish_time=now,
         source_name="Detail Source",
         source_url="https://example.com/1",
         category=ArticleCategory.FRONTIER,
+        status=None,
         tags=[],
         crawl_time=now,
         content_source="web_page",
         summary="摘要内容",
-        translated_content="译文内容",
-        translated_content_html="<p>译文内容</p>",
+        translated_content="翻译正文",
+        translated_content_html="<p>翻译正文</p>",
         original_source_language="en",
-        ai_analysis={"key_points": ["a"]},
+        ai_analysis={"content": "分析内容", "is_positive_policy": None},
     )
     db_session.add(article)
     ai_result = models.AIResultORM(
@@ -154,7 +159,8 @@ def test_article_detail(client, db_session):
     assert response.status_code == 200
     data = response.json()["data"]
     assert data["title"] == "Detail Article"
-    assert data["translated_content"] == "译文内容"
-    assert data["ai_analysis"]["key_points"] == ["a"]
+    assert data["translated_title"] == "详情标题"
+    assert data["translated_content"] == "翻译正文"
+    assert data["ai_analysis"]["content"] == "分析内容"
     assert len(data["ai_results"]) == 1
     assert data["ai_results"][0]["task_type"] == "summary"

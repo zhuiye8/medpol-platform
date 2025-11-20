@@ -60,13 +60,11 @@ class PMDAWhatsNewCrawler(BaseCrawler):
             raise ValueError("missing url")
         title = (anchor.select_one("p.title") or anchor).get_text(strip=True)
         category = anchor.select_one("p.category")
-        status = anchor.select_one("p.status")
         date_text = (anchor.select_one("p.date") or anchor).get_text(strip=True)
         publish_time = self._parse_date(date_text)
         detail_html, raw = self._fetch_detail(detail_url)
         metadata = {
             "category_label": category.get_text(strip=True) if category else "",
-            "status": status.get_text(strip=True) if status else "",
         }
         return CrawlResult(
             title=title,

@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
 import type { Article } from "@/types/api";
-import { getCategoryLabel } from "@/constants/categories";
+import { getCategoryLabel, getStatusOptions } from "@/constants/categories";
 
 interface ArticleTableProps {
   items: Article[];
@@ -27,7 +27,7 @@ export function ArticleTable({
         <thead>
           <tr>
             <th>标题</th>
-            <th>分类</th>
+            <th>分类 / 状态</th>
             <th>来源</th>
             <th>发布时间</th>
             <th>操作</th>
@@ -36,8 +36,26 @@ export function ArticleTable({
         <tbody>
           {items.map((article) => (
             <tr key={article.id}>
-              <td style={{ maxWidth: 360 }}>{article.title}</td>
-              <td>{getCategoryLabel(article.category)}</td>
+              <td style={{ maxWidth: 360 }}>
+                <div>{article.title}</div>
+                {article.translated_title ? (
+                  <div style={{ color: "#64748b", fontSize: 12 }}>{article.translated_title}</div>
+                ) : null}
+                {article.is_positive_policy !== null && article.is_positive_policy !== undefined ? (
+                  <div style={{ color: article.is_positive_policy ? "#16a34a" : "#b91c1c", fontSize: 12 }}>
+                    {article.is_positive_policy ? "利好" : "中性/不利"}
+                  </div>
+                ) : null}
+              </td>
+              <td>
+                <div>{getCategoryLabel(article.category)}</div>
+                {article.status ? (
+                  <div style={{ color: "#64748b", fontSize: 12 }}>
+                    {getStatusOptions(article.category).find((s) => s.value === article.status)?.label ??
+                      article.status}
+                  </div>
+                ) : null}
+              </td>
               <td>{article.source_name}</td>
               <td>{dayjs(article.publish_time).format("YYYY-MM-DD HH:mm")}</td>
               <td style={{ display: "flex", gap: 8 }}>

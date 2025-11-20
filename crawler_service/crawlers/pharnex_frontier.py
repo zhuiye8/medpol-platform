@@ -1,4 +1,4 @@
-"""药渡云-前沿动态爬虫，实现 `/zixun/more` 接口采集。"""
+"""药渡云前沿动态爬虫，实现 `/zixun/more` 接口采集。"""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from ..registry import registry
 
 
 class PharnexFrontierCrawler(BaseCrawler):
-    """药渡云 - 前沿动态栏目."""
+    """药渡云 - 前沿动态栏目。"""
 
     name = "pharnex_frontier"
     label = "前沿动态"
@@ -30,7 +30,6 @@ class PharnexFrontierCrawler(BaseCrawler):
         self.abbreviation = meta.get("abbreviation", "qy")
         self.page_size = int(meta.get("page_size", 10))
         self.max_pages = int(meta.get("max_pages", 3))
-        # 默认补充浏览器 UA，避免被判定为机器人
         default_headers = {
             "User-Agent": (
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -46,6 +45,7 @@ class PharnexFrontierCrawler(BaseCrawler):
         """分页请求 `/zixun/more` 并解析文章。"""
 
         results: List[CrawlResult] = []
+        max_total = self.page_size * self.max_pages if self.max_pages > 0 else None
         for page in range(1, self.max_pages + 1):
             params = {
                 "page": page,
@@ -63,9 +63,11 @@ class PharnexFrontierCrawler(BaseCrawler):
                 try:
                     results.append(self._build_result(article))
                 except Exception as exc:  # pylint: disable=broad-except
-                    self.logger.warning(
-                        "解析文章失败 id=%s err=%s", article.get("id"), exc
-                    )
+                    self.logger.warning("解析文章失败 id=%s err=%s", article.get("id"), exc)
+                if max_total and len(results) >= max_total:
+                    break
+            if max_total and len(results) >= max_total:
+                break
             last_page = (payload.get("meta") or {}).get("last_page")
             if last_page and page >= last_page:
                 break
@@ -98,7 +100,7 @@ class PharnexFrontierCrawler(BaseCrawler):
         )
 
     def _merge_modules(self, article: Dict) -> str:
-        """将模块化正文拼接为完整 HTML."""
+        """将模块化正文拼接为完整 HTML。"""
 
         modules = article.get("modules") or []
         bodies = [module.get("body", "") for module in modules if module.get("body")]

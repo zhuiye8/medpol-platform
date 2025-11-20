@@ -83,17 +83,10 @@ class EmaWhatsNewCrawler(BaseCrawler):
         title = link.get_text(strip=True)
         content_type = title_block.select_one(".content-type strong")
         substance = title_block.select_one(".metadata")
-        status_col = cols[2] if len(cols) > 2 else None
-        status = (
-            status_col.get_text(strip=True)
-            if status_col and status_col.get_text(strip=True)
-            else ""
-        )
         detail_html, raw_html = self._fetch_detail(detail_url)
         metadata = {
             "content_type": content_type.get_text(strip=True) if content_type else "",
             "substance": substance.get_text(strip=True) if substance else "",
-            "status": status,
         }
         return CrawlResult(
             title=title,

@@ -42,9 +42,9 @@ export default function ArticleDetailPage() {
       ) : detail ? (
         <>
           <div className="panel">
-            <h2>{detail.title}</h2>
+            <h2>{detail.translated_title || detail.title}</h2>
             <p style={{ color: "#64748b" }}>
-              来源：{detail.source_name} ｜ 发布时间：{new Date(detail.publish_time).toLocaleString()}
+              来源：{detail.source_name} · 发布时间：{new Date(detail.publish_time).toLocaleString()}
             </p>
             <div dangerouslySetInnerHTML={{ __html: detail.content_html }} />
           </div>
@@ -57,7 +57,15 @@ export default function ArticleDetailPage() {
           {detail.ai_analysis ? (
             <div className="panel" style={{ marginTop: 24 }}>
               <h3>AI 分析</h3>
-              <pre style={{ whiteSpace: "pre-wrap" }}>{JSON.stringify(detail.ai_analysis, null, 2)}</pre>
+              {detail.ai_analysis.content ? (
+                <p style={{ whiteSpace: "pre-wrap", marginTop: 8 }}>{detail.ai_analysis.content}</p>
+              ) : null}
+              {detail.ai_analysis.is_positive_policy !== undefined &&
+              detail.ai_analysis.is_positive_policy !== null ? (
+                <p style={{ color: detail.ai_analysis.is_positive_policy ? "#16a34a" : "#b91c1c" }}>
+                  {detail.ai_analysis.is_positive_policy ? "利好政策" : "中性/不利"}
+                </p>
+              ) : null}
             </div>
           ) : null}
           <div className="panel" style={{ marginTop: 24 }}>
@@ -68,7 +76,7 @@ export default function ArticleDetailPage() {
               <table className="table">
                 <thead>
                   <tr>
-                    <th>类型</th>
+                    <th>任务</th>
                     <th>Provider</th>
                     <th>模型</th>
                     <th>时间</th>

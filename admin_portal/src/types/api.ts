@@ -10,15 +10,23 @@ export type ArticleCategory =
   | "cde_trend"
   | "industry_trend";
 
+export interface AIAnalysis {
+  content?: string | null;
+  is_positive_policy?: boolean | null;
+}
+
 export interface Article {
   id: string;
   title: string;
+  translated_title?: string | null;
   summary?: string | null;
   publish_time: string;
   source_name: string;
   category: ArticleCategory;
+  status?: string | null;
   tags: string[];
   source_url: string;
+  is_positive_policy?: boolean | null;
 }
 
 export interface ArticleListData {
@@ -40,14 +48,19 @@ export interface AIResult {
 export interface ArticleDetail {
   id: string;
   title: string;
+  translated_title?: string | null;
   content_html: string;
   translated_content?: string | null;
   translated_content_html?: string | null;
-  ai_analysis?: Record<string, unknown> | null;
+  ai_analysis?: AIAnalysis | null;
   summary?: string | null;
   publish_time: string;
   source_name: string;
+  source_url: string;
+  category: ArticleCategory;
+  status?: string | null;
   original_source_language?: string | null;
+  is_positive_policy?: boolean | null;
   ai_results: AIResult[];
 }
 

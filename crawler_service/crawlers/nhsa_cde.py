@@ -1,4 +1,4 @@
-"""国家医保局 - 政策与动态（CDE 动态）爬虫."""
+"""国家医保局 - CDE 动态（工作动态/受理品种）。"""
 
 from __future__ import annotations
 
@@ -14,11 +14,11 @@ from ..registry import registry
 
 
 class NHSACDECrawler(BaseCrawler):
-    """采集国家医保局官网“政策与动态”栏目."""
+    """采集医保局发布的 CDE 动态，带 status 区分。"""
 
     name = "nhsa_cde"
-    label = "国家医保局-政策与动态"
-    source_name = "国家医疗保障局"
+    label = "国家医保局-CDE 动态"
+    source_name = "国家医保局"
     category = ArticleCategory.CDE_TREND
     start_urls = ["https://www.nhsa.gov.cn/col/col147/index.html"]
 
@@ -28,6 +28,8 @@ class NHSACDECrawler(BaseCrawler):
         self.list_url = meta.get("list_url") or self.start_urls[0]
         self.page_size = int(meta.get("page_size", 20))
         self.max_pages = int(meta.get("max_pages", 1))
+        # status: operations / accepted_products
+        self.status = meta.get("status") or ("accepted_products" if "col148" in self.list_url else "operations")
         self._client.headers.setdefault(
             "User-Agent",
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -45,7 +47,7 @@ class NHSACDECrawler(BaseCrawler):
             try:
                 results.append(self._build_result(entry))
             except Exception as exc:  # pylint: disable=broad-except
-                self.logger.warning("解析文章失败 url=%s err=%s", entry["url"], exc)
+                self.logger.warning("CDE 动态采集失败 url=%s err=%s", entry["url"], exc)
         self.logger.info("CDE 动态采集 %s 条记录", len(results))
         return results
 
@@ -98,6 +100,7 @@ class NHSACDECrawler(BaseCrawler):
         metadata = {
             "article_id": entry["article_id"],
             "category": self.category.value,
+            "status": self.status,
         }
         return CrawlResult(
             title=entry["title"],

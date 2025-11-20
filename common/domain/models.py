@@ -1,4 +1,4 @@
-"""领域数据模型定义，所有模块共享统一结构。"""
+"""Domain data models shared across modules."""
 
 from enum import Enum
 from datetime import datetime
@@ -8,22 +8,22 @@ from pydantic import BaseModel, Field, HttpUrl
 
 
 class ArticleCategory(str, Enum):
-    """文章分类枚举，统一所有模块使用的业务标签。"""
+    """Article categories."""
 
-    FRONTIER = "frontier"  # 前沿动态
+    FRONTIER = "frontier"
     FDA_POLICY = "fda_policy"
     EMA_POLICY = "ema_policy"
     PMDA_POLICY = "pmda_policy"
-    BIDDING = "bidding"  # 医保招标采集（国家/省级集中采购）
-    LAWS = "laws"  # 法律法规
-    INSTITUTION = "institution"  # 中心制度
+    BIDDING = "bidding"
+    LAWS = "laws"
+    INSTITUTION = "institution"
     PROJECT_APPLY = "project_apply"
-    CDE_TREND = "cde_trend"  # CDE 动态
-    INDUSTRY_TREND = "industry_trend"  # 行业动态
+    CDE_TREND = "cde_trend"
+    INDUSTRY_TREND = "industry_trend"
 
 
 class RawArticle(BaseModel):
-    """原始爬取的文章载荷，用于传递给格式化模块。"""
+    """Raw article payload."""
 
     article_id: str = Field(..., description="原始记录 ID，通常为 UUID")
     source_id: str = Field("", description="来源 ID，便于溯源")
@@ -35,11 +35,12 @@ class RawArticle(BaseModel):
     publish_time: Optional[datetime] = Field(None, description="原文发布时间")
     crawl_time: datetime = Field(..., description="采集时间")
     content_source: str = Field("web_page", description="具体渠道，如 web_page/wechat")
-    metadata: dict = Field(default_factory=dict, description="附加元信息（标签、摘要等）")
+    status: Optional[str] = Field(None, description="子分类/状态，用于筛选")
+    metadata: dict = Field(default_factory=dict, description="附加元信息（标签等）")
 
 
 class Source(BaseModel):
-    """数据来源配置，例如 FDA 官网、行业协会等。"""
+    """Data source config."""
 
     id: str = Field(..., description="来源主键，UUID")
     name: str = Field(..., description="来源展示名称")
@@ -47,54 +48,51 @@ class Source(BaseModel):
     base_url: HttpUrl = Field(..., description="来源根域名，便于监控与跳转")
     category: ArticleCategory = Field(..., description="来源所属类别，例：fda_policy")
     is_active: bool = Field(True, description="是否启用")
-    crawl_frequency_minutes: int = Field(60, description="建议采集频率，便于动态调整")
+    crawl_frequency_minutes: int = Field(60, description="建议采集频率")
     meta: dict = Field(default_factory=dict, description="额外配置信息，如代理、凭证")
 
 
 class Article(BaseModel):
-    """标准化后的文章/政策信息。"""
+    """Normalized article/policy data."""
 
     id: str = Field(..., description="UUID 主键")
     source_id: str = Field(..., description="来源 ID")
     title: str = Field(..., description="文章标题")
+    translated_title: Optional[str] = Field(None, description="翻译后的标题")
     content_html: str = Field(..., description="结构化 HTML 内容")
     content_text: str = Field(..., description="纯文本内容，便于搜索")
     publish_time: datetime = Field(..., description="原文发布时间")
     source_name: str = Field(..., description="来源名称，冗余展示")
     source_url: HttpUrl = Field(..., description="原文链接")
     category: ArticleCategory = Field(..., description="业务分类，如 fda_policy")
+    status: Optional[str] = Field(None, description="子分类/状态，统一筛选键")
     tags: List[str] = Field(default_factory=list, description="标签列表")
     crawl_time: datetime = Field(..., description="采集时间")
     content_source: str = Field(..., description="内容来源渠道，如 web_page/wechat")
     summary: Optional[str] = Field(None, description="AI 生成摘要")
-    ai_analysis: Optional[dict] = Field(None, description="AI 专业解读结构化结果")
+    ai_analysis: Optional[dict] = Field(None, description="AI 专业解读：content + is_positive_policy")
     translated_content: Optional[str] = Field(None, description="翻译后纯文本")
     translated_content_html: Optional[str] = Field(None, description="翻译后的 HTML")
     original_source_language: Optional[str] = Field(None, description="原文语言代码")
-    apply_status: Optional[str] = Field(
-        None, description="项目申报状态：pending（未申报）/submitted（已申报）"
-    )
-    is_positive_policy: Optional[bool] = Field(
-        None, description="是否利好政策（AI 判定）"
-    )
+    is_positive_policy: Optional[bool] = Field(None, description="是否利好政策（同步 ai_analysis）")
 
 
 class AIResult(BaseModel):
-    """AI 模块生成的结果记录。"""
+    """AI result record."""
 
     id: str = Field(..., description="UUID 主键")
-    article_id: str = Field(..., description="关联的文章 UUID")
+    article_id: str = Field(..., description="关联的文档 UUID")
     task_type: str = Field(..., description="任务类型：summary/translation/analysis")
     provider: str = Field(..., description="模型提供方，例：openai/deepseek")
     model: str = Field(..., description="模型名称")
-    output: str = Field(..., description="AI 输出内容（可为 JSON 字符串）")
+    output: str = Field(..., description="AI 输出内容（可能是 JSON 字符串）")
     latency_ms: int = Field(..., description="耗时，毫秒")
     created_at: datetime = Field(default_factory=datetime.utcnow, description="生成时间")
     metadata: dict = Field(default_factory=dict, description="额外上下文信息")
 
 
 class DistributionEvent(BaseModel):
-    """用于分发的数据载体。"""
+    """Envelope for distribution."""
 
     article: Article
     ai_results: List[AIResult] = Field(default_factory=list)
@@ -105,7 +103,7 @@ class DistributionEvent(BaseModel):
 
 
 class CrawlerTask(BaseModel):
-    """爬虫调度任务描述。"""
+    """Crawler task description."""
 
     source_id: str = Field(..., description="来源 ID")
     crawler_name: str = Field(..., description="对应的爬虫类名")
@@ -116,7 +114,7 @@ class CrawlerTask(BaseModel):
 
 
 class ErrorEnvelope(BaseModel):
-    """统一错误返回结构。"""
+    """Error envelope."""
 
     code: int = Field(..., description="错误码")
     msg: str = Field(..., description="错误描述")
@@ -124,7 +122,7 @@ class ErrorEnvelope(BaseModel):
 
 
 class CrawlerJob(BaseModel):
-    """调度任务配置。"""
+    """Scheduler job config."""
 
     id: str
     name: str
@@ -143,7 +141,7 @@ class CrawlerJob(BaseModel):
 
 
 class CrawlerJobRun(BaseModel):
-    """调度任务执行记录。"""
+    """Scheduler job execution record."""
 
     id: str
     job_id: str

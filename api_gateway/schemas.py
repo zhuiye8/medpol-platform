@@ -1,4 +1,4 @@
-"""API 响应 Schema。"""
+"""API response schemas."""
 
 from __future__ import annotations
 
@@ -9,16 +9,22 @@ from pydantic import BaseModel, Field
 from common.domain import ArticleCategory
 
 
+class AIAnalysisData(BaseModel):
+    content: Optional[str] = None
+    is_positive_policy: Optional[bool] = None
+
+
 class ArticleItem(BaseModel):
     id: str
     title: str
+    translated_title: Optional[str] = None
     summary: Optional[str] = None
     publish_time: datetime
     source_name: str
     category: ArticleCategory
+    status: Optional[str] = None
     tags: List[str]
     source_url: str
-    apply_status: Optional[str] = None
     is_positive_policy: Optional[bool] = None
 
 
@@ -165,14 +171,17 @@ class AIResultItem(BaseModel):
 class ArticleDetailData(BaseModel):
     id: str
     title: str
+    translated_title: Optional[str]
     content_html: str
     translated_content: Optional[str]
     translated_content_html: Optional[str]
-    ai_analysis: Optional[dict]
+    ai_analysis: Optional[AIAnalysisData]
     summary: Optional[str]
     publish_time: datetime
     source_name: str
+    source_url: str
+    category: ArticleCategory
+    status: Optional[str]
     original_source_language: Optional[str]
-    apply_status: Optional[str] = None
-    is_positive_policy: Optional[bool] = None
+    is_positive_policy: Optional[bool]
     ai_results: List[AIResultItem]

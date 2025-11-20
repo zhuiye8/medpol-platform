@@ -1,11 +1,11 @@
-"""简单的仓储封装，供服务层调用。"""
+"""Lightweight repository helpers for core data access."""
 
 from __future__ import annotations
 
 from datetime import datetime
 from typing import Iterable, List, Optional
 
-from sqlalchemy import func, select, case
+from sqlalchemy import func, select, case, or_
 from sqlalchemy.orm import Session
 from common.domain import ArticleCategory
 
@@ -13,7 +13,7 @@ from . import models
 
 
 class SourceRepository:
-    """来源数据访问。"""
+    """Source access helpers."""
 
     def __init__(self, session: Session) -> None:
         self.session = session
@@ -34,7 +34,7 @@ class SourceRepository:
 
 
 class ArticleRepository:
-    """文章数据访问。"""
+    """Article access helpers."""
 
     def __init__(self, session: Session) -> None:
         self.session = session
@@ -61,27 +61,39 @@ class ArticleRepository:
         page: int = 1,
         page_size: int = 20,
         category: Optional[ArticleCategory] = None,
+        status: Optional[str] = None,
+        q: Optional[str] = None,
     ) -> tuple[List[models.ArticleORM], int]:
         stmt = select(models.ArticleORM).order_by(models.ArticleORM.publish_time.desc())
         if category:
             db_value = category.value if isinstance(category, ArticleCategory) else category
             stmt = stmt.where(models.ArticleORM.category == db_value)
-        total = self.session.scalar(
-            select(func.count()).select_from(stmt.subquery())  # type: ignore[arg-type]
-        )
+        if status:
+            stmt = stmt.where(models.ArticleORM.status == status)
+        if q:
+            pattern = f"%{q}%"
+            stmt = stmt.where(
+                or_(
+                    models.ArticleORM.title.ilike(pattern),
+                    models.ArticleORM.translated_title.ilike(pattern),
+                    models.ArticleORM.content_text.ilike(pattern),
+                )
+            )
+        total = self.session.scalar(select(func.count()).select_from(stmt.subquery()))
         stmt = stmt.offset((page - 1) * page_size).limit(page_size)
         return list(self.session.scalars(stmt)), int(total or 0)
 
-    def list_without_summary(self, limit: int = 10) -> List[models.ArticleORM]:
+    def list_without_summary(self, limit: int | None = 10) -> List[models.ArticleORM]:
         stmt = (
             select(models.ArticleORM)
             .where(models.ArticleORM.summary.is_(None))
             .order_by(models.ArticleORM.publish_time.desc())
-            .limit(limit)
         )
+        if limit:
+            stmt = stmt.limit(limit)
         return list(self.session.scalars(stmt))
 
-    def list_without_translation(self, limit: int = 10) -> List[models.ArticleORM]:
+    def list_without_translation(self, limit: int | None = 10) -> List[models.ArticleORM]:
         stmt = (
             select(models.ArticleORM)
             .where(
@@ -90,17 +102,29 @@ class ArticleRepository:
                 models.ArticleORM.original_source_language != "zh",
             )
             .order_by(models.ArticleORM.publish_time.desc())
-            .limit(limit)
         )
+        if limit:
+            stmt = stmt.limit(limit)
         return list(self.session.scalars(stmt))
 
-    def list_without_analysis(self, limit: int = 10) -> List[models.ArticleORM]:
+    def list_without_title_translation(self, limit: int | None = 10) -> List[models.ArticleORM]:
+        stmt = (
+            select(models.ArticleORM)
+            .where(models.ArticleORM.translated_title.is_(None))
+            .order_by(models.ArticleORM.publish_time.desc())
+        )
+        if limit:
+            stmt = stmt.limit(limit)
+        return list(self.session.scalars(stmt))
+
+    def list_without_analysis(self, limit: int | None = 10) -> List[models.ArticleORM]:
         stmt = (
             select(models.ArticleORM)
             .where(models.ArticleORM.ai_analysis.is_(None))
             .order_by(models.ArticleORM.publish_time.desc())
-            .limit(limit)
         )
+        if limit:
+            stmt = stmt.limit(limit)
         return list(self.session.scalars(stmt))
 
     def count_by_category(self, category: ArticleCategory) -> int:
@@ -141,12 +165,12 @@ class ArticleRepository:
         )
         base = (
             select(
-                models.ArticleORM.apply_status,
+                models.ArticleORM.status,
                 func.count().label("cnt"),
                 func.sum(year_case).label("year_cnt"),
             )
             .where(models.ArticleORM.category == ArticleCategory.PROJECT_APPLY.value)
-            .group_by(models.ArticleORM.apply_status)
+            .group_by(models.ArticleORM.status)
         )
         rows = list(self.session.execute(base))
         result = {
@@ -155,11 +179,11 @@ class ArticleRepository:
             "pending_year": 0,
             "submitted_year": 0,
         }
-        for status, cnt, year_cnt in rows:
-            if status == "pending":
+        for status_value, cnt, year_cnt in rows:
+            if status_value == "pending":
                 result["pending_total"] = int(cnt or 0)
                 result["pending_year"] = int(year_cnt or 0)
-            elif status == "submitted":
+            elif status_value == "submitted":
                 result["submitted_total"] = int(cnt or 0)
                 result["submitted_year"] = int(year_cnt or 0)
         return result
@@ -177,7 +201,7 @@ class ArticleRepository:
 
 
 class AIResultRepository:
-    """AI 结果数据访问。"""
+    """AI result access helpers."""
 
     def __init__(self, session: Session) -> None:
         self.session = session
@@ -203,7 +227,7 @@ class AIResultRepository:
 
 
 class CrawlerJobRepository:
-    """调度任务仓储。"""
+    """Crawler job access helpers."""
 
     def __init__(self, session: Session) -> None:
         self.session = session
@@ -257,7 +281,7 @@ class CrawlerJobRepository:
 
 
 class FinanceRecordRepository:
-    """财务数据仓储"""
+    """Finance record access."""
 
     def __init__(self, session: Session) -> None:
         self.session = session
@@ -270,7 +294,7 @@ class FinanceRecordRepository:
 
 
 class FinanceSyncLogRepository:
-    """财务同步日志仓储"""
+    """Finance sync log access."""
 
     def __init__(self, session: Session) -> None:
         self.session = session

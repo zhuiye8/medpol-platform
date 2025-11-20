@@ -1,4 +1,4 @@
-"""FastAPI 依赖：数据库 Session 等。"""
+"""FastAPI dependency for DB sessions."""
 
 from __future__ import annotations
 
@@ -9,6 +9,10 @@ from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from common.persistence.database import get_session_factory
+from common.utils.env import load_env
+
+# 确保 .env 加载，启动时不缺 DATABASE_URL
+load_env()
 
 
 SessionLocal = None
@@ -27,7 +31,7 @@ def get_session_factory_cached():
 
 
 def get_db_session() -> Generator[Session, None, None]:
-    """FastAPI 依赖，提供 SQLAlchemy Session。"""
+    """FastAPI 路由使用的 Session 生成器。"""
 
     session_factory = get_session_factory_cached()
     session = session_factory()

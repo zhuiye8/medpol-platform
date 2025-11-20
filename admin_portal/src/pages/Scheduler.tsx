@@ -41,7 +41,9 @@ export default function SchedulerPage() {
     refreshCelery,
     resetData,
     lastReset,
+    runPipelineQuick,
   } = useScheduler();
+
   const [form, setForm] = useState<JobFormState>(defaultForm);
   const [selectedJob, setSelectedJob] = useState<string | null>(null);
   const [runs, setRuns] = useState<CrawlerJobRun[]>([]);
@@ -54,6 +56,9 @@ export default function SchedulerPage() {
   const [resetError, setResetError] = useState<string | null>(null);
   const [resetResult, setResetResult] = useState<ResetResult | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<ArticleCategory | "">("");
+  const [quickRunning, setQuickRunning] = useState(false);
+  const [quickError, setQuickError] = useState<string | null>(null);
+  const recentReset = resetResult ?? lastReset;
 
   useEffect(() => {
     if (!selectedJob) {
@@ -89,8 +94,8 @@ export default function SchedulerPage() {
       let payload;
       try {
         payload = JSON.parse(form.payload_meta || "{}");
-      } catch (err) {
-        throw new Error("payload 元数据需要是合法 JSON");
+      } catch {
+        throw new Error("payload 元数据需要是合法的 JSON");
       }
       await createJob({
         name: form.name,
@@ -122,9 +127,7 @@ export default function SchedulerPage() {
 
   const handleDelete = async (jobId: string) => {
     const confirmed = window.confirm("确认删除该任务？删除后不可恢复。");
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
     await deleteJob(jobId);
     if (selectedJob === jobId) {
       setSelectedJob(null);
@@ -136,6 +139,7 @@ export default function SchedulerPage() {
   const handlePipelineRun = async () => {
     setPipelineRunning(true);
     setPipelineError(null);
+    setQuickError(null);
     try {
       const result = await runPipeline();
       setPipelineResult(result);
@@ -148,11 +152,25 @@ export default function SchedulerPage() {
     }
   };
 
-  const handleReset = async () => {
-    const confirmed = window.confirm("将清空数据库与缓存中的所有文章/任务，确认继续？");
-    if (!confirmed) {
-      return;
+  const handlePipelineQuickRun = async () => {
+    setQuickRunning(true);
+    setQuickError(null);
+    setPipelineError(null);
+    try {
+      const result = await runPipelineQuick();
+      setPipelineResult(result);
+      refresh();
+    } catch (err) {
+      setQuickError(err instanceof Error ? err.message : "执行失败");
+    } finally {
+      setQuickRunning(false);
+      refreshCelery();
     }
+  };
+
+  const handleReset = async () => {
+    const confirmed = window.confirm("将清空数据库与缓存中的所有文章与任务，确认继续？");
+    if (!confirmed) return;
     setResetting(true);
     setResetError(null);
     try {
@@ -171,19 +189,24 @@ export default function SchedulerPage() {
   return (
     <div>
       <div className="page-header">
-        <h1>任务调度</h1>
-        <span style={{ color: "#64748b" }}>配置定时任务或临时测试，并可一键校验完整流水线</span>
+        <h1>采集与调度</h1>
+        <span style={{ color: "#64748b" }}>统一管理爬虫任务、流水线执行与数据清理。</span>
       </div>
 
       <div className="panel" style={{ marginBottom: 24 }}>
         <div className="toolbar" style={{ justifyContent: "space-between", marginBottom: 12 }}>
           <div>
-            <h3 style={{ margin: 0 }}>一键执行采集 → 格式化 → AI</h3>
-            <p style={{ margin: 0, color: "#64748b", fontSize: 13 }}>排查数据缺失前，先确认流水线运行是否正常。</p>
+            <h3 style={{ margin: 0 }}>一键执行采集 + 格式化 + AI</h3>
+            <p style={{ margin: 0, color: "#64748b", fontSize: 13 }}>
+              排查数据缺失前，先确认流水线运行是否正常。
+            </p>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button className="ghost" onClick={refreshCelery}>
-              检测 Celery
+              检查 Celery
+            </button>
+            <button className="ghost" onClick={handlePipelineQuickRun} disabled={quickRunning}>
+              {quickRunning ? "检测中..." : "快速检测（每爬虫 1 条）"}
             </button>
             <button className="primary" onClick={handlePipelineRun} disabled={pipelineRunning}>
               {pipelineRunning ? "执行中..." : "运行完整流程"}
@@ -193,6 +216,7 @@ export default function SchedulerPage() {
             </button>
           </div>
         </div>
+
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
           <span>Celery 状态：</span>
           {celeryStatus ? (
@@ -204,15 +228,19 @@ export default function SchedulerPage() {
           )}
           <span style={{ color: "#94a3b8", fontSize: 13 }}>{celeryStatus?.detail || celeryError || "--"}</span>
         </div>
+
         {pipelineError ? <div style={{ color: "#b91c1c" }}>{pipelineError}</div> : null}
+        {quickError ? <div style={{ color: "#b91c1c" }}>{quickError}</div> : null}
         {resetError ? <div style={{ color: "#b91c1c" }}>{resetError}</div> : null}
-        {resetResult || lastReset ? (
+
+        {recentReset ? (
           <div style={{ color: "#94a3b8", fontSize: 13, marginBottom: 8 }}>
-            最近清理完成：Redis {resetResult?.redis_cleared ?? lastReset?.redis_cleared ? "已清空" : "未执行"}，
-            表数 {resetResult?.truncated_tables.length ?? lastReset?.truncated_tables.length ?? 0}，
-            目录 {resetResult?.cleared_dirs.length ?? lastReset?.cleared_dirs.length ?? 0}
+            最近清理完成：Redis {recentReset.redis_cleared ? "已清理" : "未执行"}；
+            表数 {recentReset.truncated_tables.length}；
+            目录 {recentReset.cleared_dirs.length}
           </div>
         ) : null}
+
         {pipelineResult ? (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 12 }}>
             <div style={{ background: "#0f172a", borderRadius: 8, padding: 12 }}>
@@ -245,7 +273,9 @@ export default function SchedulerPage() {
             </div>
           </div>
         ) : (
-          <div style={{ color: "#94a3b8", fontSize: 13 }}>尚未执行，可点击“运行完整流程”验证一次。</div>
+          <div style={{ color: "#94a3b8", fontSize: 13 }}>
+            尚未执行，可点击“快速检测（每爬虫 1 条）”或“运行完整流程”验证一次。
+          </div>
         )}
       </div>
 
@@ -254,7 +284,10 @@ export default function SchedulerPage() {
         {formError ? <div style={{ color: "#b91c1c" }}>{formError}</div> : null}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 12 }}>
           <input value={form.name} placeholder="任务名称" onChange={(e) => handleField("name", e.target.value)} />
-          <select value={selectedCategory} onChange={(e) => handleCategoryChange((e.target.value || "") as ArticleCategory | "")}>
+          <select
+            value={selectedCategory}
+            onChange={(e) => handleCategoryChange((e.target.value || "") as ArticleCategory | "")}
+          >
             <option value="">选择分类</option>
             {CATEGORY_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -276,7 +309,11 @@ export default function SchedulerPage() {
               </option>
             ))}
           </select>
-          <input value={form.source_id} placeholder="来源 ID（sources.id）" onChange={(e) => handleField("source_id", e.target.value)} />
+          <input
+            value={form.source_id}
+            placeholder="来源 ID（sources.id）"
+            onChange={(e) => handleField("source_id", e.target.value)}
+          />
           <select value={form.job_type} onChange={(e) => handleField("job_type", e.target.value as JobFormState["job_type"])}>
             <option value="scheduled">定时任务</option>
             <option value="one_off">临时任务</option>
