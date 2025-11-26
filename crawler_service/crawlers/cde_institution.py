@@ -53,38 +53,17 @@ class CDEInstitutionCrawler(BaseCrawler):
         return results
 
     def _fetch_listing_html(self) -> str:
-        """使用 Playwright 渲染列表页，绕过反爬机制."""
+        """使用 HTTP 请求获取列表页（兜底方法，不推荐，已由 _fetch_all_pages 替代）."""
+        self.logger.info("使用 HTTP 获取中心制度列表页: %s", self.list_url)
         try:
-            self.logger.info("使用 Playwright 渲染中心制度列表页: %s", self.list_url)
-            html = fetch_html(
-                self.list_url,
-                wait_selector="div.news_item",
-                wait_time=3.0
-            )
-            self.logger.info("Playwright 渲染完成，HTML 长度: %d", len(html))
-            self.logger.debug("HTML 前500字符: %s", html[:500])
-
-            if "news_item" not in html:
-                self.logger.warning("Playwright 渲染的 HTML 中未找到 news_item")
-            else:
-                self.logger.info("成功找到 news_item 元素")
-
+            response = self.request("GET", self.list_url)
+            response.encoding = response.charset_encoding or "utf-8"
+            html = response.text
+            self.logger.info("HTTP 请求成功，HTML 长度: %d", len(html))
+            return html
         except Exception as exc:
-            self.logger.warning("Playwright 渲染失败: %s，尝试使用兜底文件", exc)
-            html = ""
-
-        # 兜底机制：使用本地 HTML 文件
-        if "news_item" not in html:
-            fallback = os.getenv("CDE_HTML_FILE")
-            if fallback and os.path.exists(fallback):
-                try:
-                    self.logger.info("使用兜底文件: %s", fallback)
-                    html = Path(fallback).read_text(encoding="utf-8")
-                    self.logger.info("兜底文件加载成功，HTML 长度: %d", len(html))
-                except Exception as exc:
-                    self.logger.error("加载兜底文件失败: %s", exc)
-
-        return html
+            self.logger.error("HTTP 请求失败: %s", exc)
+            return ""
 
     def _fetch_all_pages(self) -> List[Dict[str, str]]:
         """使用Playwright翻页采集所有需要的条目."""
@@ -117,9 +96,15 @@ class CDEInstitutionCrawler(BaseCrawler):
             """)
 
             try:
-                # 访问第一页
-                page.goto(self.list_url, wait_until="networkidle", timeout=30000)
-                page.wait_for_selector("div.news_item", timeout=5000)
+                # 访问第一页（只等待 domcontentloaded，不等待 networkidle）
+                page.goto(self.list_url, wait_until="domcontentloaded", timeout=30000)
+                # 等待页面内容加载
+                page.wait_for_timeout(2000)
+                # 尝试等待选择器，但允许失败
+                try:
+                    page.wait_for_selector("div.news_item", timeout=5000)
+                except:
+                    self.logger.warning("等待 div.news_item 超时，继续尝试")
 
                 while len(all_entries) < self.max_items:
                     # 提取当前页的HTML
@@ -148,10 +133,13 @@ class CDEInstitutionCrawler(BaseCrawler):
                         self.logger.info("点击下一页...")
                         next_button.click()
 
-                        # 等待页面更新（等待第一个news_item重新加载）
-                        page.wait_for_timeout(1000)  # 等待1秒让页面开始加载
-                        page.wait_for_load_state("networkidle", timeout=10000)
-                        page.wait_for_selector("div.news_item", timeout=5000)
+                        # 等待页面更新
+                        page.wait_for_timeout(2000)  # 等待2秒让页面加载
+                        # 尝试等待选择器，但允许失败
+                        try:
+                            page.wait_for_selector("div.news_item", timeout=5000)
+                        except:
+                            self.logger.warning("翻页后等待选择器超时，继续")
 
                         page_num += 1
 

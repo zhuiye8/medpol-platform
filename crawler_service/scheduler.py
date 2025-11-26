@@ -28,7 +28,28 @@ DEFAULT_CONFIGS = [
         crawler_name="pharnex_frontier",
         meta={"category_slug": "shiye", "abbreviation": "qy", "max_pages": 1, "page_size": 5},
     ),
-    # 医保局类
+    # 医保局
+    CrawlerRuntimeConfig(
+        source_id="src_nhsa_policy_updates",
+        source_name="国家医保局-政策与动态",
+        crawler_name="nhsa_policy_updates",
+        meta={
+            "max_pages": 1,
+            "page_size": 20,
+            "list_url": "https://www.nhsa.gov.cn/col/col147/index.html",
+        },
+    ),
+    CrawlerRuntimeConfig(
+        source_id="src_nhsa_cde",
+        source_name="国家医保局-CDE 动态",
+        crawler_name="nhsa_cde",
+        meta={
+            "max_items": 20,
+            "list_url": "https://www.cde.org.cn/main/news/listpage/3cc45b396497b598341ce3af000490e5",
+            "status": "operations",
+            "remote_cdp_url": os.getenv("NMPA_REMOTE_CDP_URL") or os.getenv("REMOTE_CDP_URL"),
+        },
+    ),
     CrawlerRuntimeConfig(
         source_id="src_nhsa_bidding_national",
         source_name="国家医保局-国家集采",
@@ -51,27 +72,7 @@ DEFAULT_CONFIGS = [
             "source_label": "省级集中采购",
         },
     ),
-    CrawlerRuntimeConfig(
-        source_id="src_nhsa_cde",
-        source_name="国家医保局-CDE 动态",
-        crawler_name="nhsa_cde",
-        meta={
-            "max_pages": 1,
-            "page_size": 20,
-            "list_url": "https://www.nhsa.gov.cn/col/col147/index.html",
-        },
-    ),
-    CrawlerRuntimeConfig(
-        source_id="src_nhsa_industry",
-        source_name="国家医保局-行业动态",
-        crawler_name="nhsa_industry",
-        meta={
-            "max_pages": 1,
-            "page_size": 20,
-            "list_url": "https://www.nhsa.gov.cn/col/col193/index.html",
-        },
-    ),
-    # CDE 法规/制度
+    # CDE 法规/制度/受理品种
     CrawlerRuntimeConfig(
         source_id="src_cde_law",
         source_name="CDE 法律法规",
@@ -88,6 +89,15 @@ DEFAULT_CONFIGS = [
         meta={
             "max_items": 50,
             "list_url": "https://www.cde.org.cn/main/policy/listpage/369ac7cfeb67c6000c33f85e6f374044",
+        },
+    ),
+    CrawlerRuntimeConfig(
+        source_id="src_cde_accepted_products",
+        source_name="CDE 受理品种信息",
+        crawler_name="cde_accepted_products",
+        meta={
+            "max_items": 20,
+            "list_url": "https://www.cde.org.cn/main/xxgk/listpage/9f9c74c73e0f8f56a8bfbc646055026d",
         },
     ),
     # 扬州项目申报
@@ -127,6 +137,18 @@ DEFAULT_CONFIGS = [
         source_name="PMDA What's New",
         crawler_name="pmda_whats_new",
         meta={"max_items": 20},
+    ),
+    # NMPA 药品监管要闻（行业动态-受理品种）
+    CrawlerRuntimeConfig(
+        source_id="src_nmpa_drug_news",
+        source_name="NMPA 药品监管要闻",
+        crawler_name="nmpa_drug_news",
+        meta={
+            "max_pages": 1,
+            "page_size": 20,
+            "list_url": "https://www.nmpa.gov.cn/yaowen/ypjgyw/index.html",
+            "remote_cdp_url": os.getenv("NMPA_REMOTE_CDP_URL") or os.getenv("REMOTE_CDP_URL"),
+        },
     ),
 ]
 

@@ -31,17 +31,29 @@ allow_origins, allow_credentials = _load_allowed_origins()
 
 # 记录到文件日志（可选）；未设置 LOG_FILE_PATH 则输出到标准输出
 log_file = os.getenv("LOG_FILE_PATH")
+log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+root_logger = logging.getLogger()
+# 若未设置处理器，则默认输出到标准输出
+if not root_logger.handlers:
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(
+        logging.Formatter(
+            "%(asctime)s [%(levelname)s] %(name)s %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
+    )
+    root_logger.addHandler(stream_handler)
 if log_file:
     handler = RotatingFileHandler(log_file, maxBytes=5 * 1024 * 1024, backupCount=2, encoding="utf-8")
-    formatter = logging.Formatter(
-        "%(asctime)s [%(levelname)s] %(name)s %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
+    handler.setFormatter(
+        logging.Formatter(
+            "%(asctime)s [%(levelname)s] %(name)s %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
     )
-    handler.setFormatter(formatter)
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
     if not any(isinstance(h, RotatingFileHandler) for h in root_logger.handlers):
         root_logger.addHandler(handler)
+root_logger.setLevel(log_level)
 
 app.add_middleware(
     CORSMiddleware,

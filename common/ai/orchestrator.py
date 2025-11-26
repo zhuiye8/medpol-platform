@@ -20,12 +20,14 @@ class OrchestratedContext:
     use_finance: bool
     use_knowledge: bool
     allow_free_answer: bool
+    category: str | None = None
 
 
 @dataclass
 class CapabilityDecision:
     use_finance: bool
     use_knowledge: bool
+    category: str | None = None
 
 
 class AbilityRouter:
@@ -50,10 +52,11 @@ class AbilityRouter:
         prompt = "\n\n".join(sections)
 
         logger.info(
-            "能力调度 persona=%s use_finance=%s use_knowledge=%s",
+            "能力调度 persona=%s use_finance=%s use_knowledge=%s category=%s",
             persona_key,
             use_finance,
             use_knowledge,
+            decision.category,
         )
 
         return OrchestratedContext(
@@ -62,6 +65,7 @@ class AbilityRouter:
             use_finance=use_finance,
             use_knowledge=use_knowledge,
             allow_free_answer=config.get("allow_free_answer", True),
+            category=decision.category,
         )
 
     def _decide(self, user_message: str) -> CapabilityDecision:
@@ -86,6 +90,7 @@ class AbilityRouter:
             decision = CapabilityDecision(
                 use_finance=bool(data.get("needs_finance")),
                 use_knowledge=bool(data.get("needs_knowledge")),
+                category=data.get("category"),
             )
         except Exception as exc:  # pragma: no cover - 兜底
             logger.warning("能力判定失败，使用 fallback: %s", exc)
@@ -100,7 +105,30 @@ class AbilityRouter:
         knowledge_keywords = ["政策", "法规", "文章", "通知", "申报", "指南"]
         use_finance = any(keyword in user_message for keyword in finance_keywords)
         use_knowledge = any(keyword in user_message for keyword in knowledge_keywords)
-        return CapabilityDecision(use_finance=use_finance, use_knowledge=use_knowledge)
+
+        # 简单的分类识别（基于关键词）
+        category = None
+        if use_knowledge:
+            if any(kw in user_message for kw in ["CDE", "药审", "受理", "审评"]):
+                category = "cde"
+            elif any(kw in user_message for kw in ["医保", "集采", "招标"]):
+                category = "nhsa"
+            elif any(kw in user_message for kw in ["药监", "NMPA", "监管"]):
+                category = "nmpa"
+            elif any(kw in user_message for kw in ["FDA"]):
+                category = "fda"
+            elif any(kw in user_message for kw in ["EMA"]):
+                category = "ema"
+            elif any(kw in user_message for kw in ["PMDA"]):
+                category = "pmda"
+            else:
+                category = "unknown"
+
+        return CapabilityDecision(
+            use_finance=use_finance,
+            use_knowledge=use_knowledge,
+            category=category,
+        )
 
 
 __all__ = ["AbilityRouter", "OrchestratedContext"]

@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     ai_chat_model: str = Field(default="gpt-4", validation_alias="AI_CHAT_MODEL")
     ai_router_model: Optional[str] = Field(default=None, validation_alias="AI_ROUTER_MODEL")
 
+    tavily_api_key: Optional[str] = Field(default=None, validation_alias="TAVILY_API_KEY")
+
     memory_ttl_minutes: int = Field(default=60, validation_alias="MEMORY_TTL_MINUTES")
     memory_window: int = Field(default=6, validation_alias="MEMORY_WINDOW")
     memory_summary_threshold: int = Field(default=10, validation_alias="MEMORY_SUMMARY_THRESHOLD")

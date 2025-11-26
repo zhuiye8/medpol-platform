@@ -1,7 +1,8 @@
-"""初始化来源配置：与当前爬虫目录一致的全量配置。"""
+"""初始化来源配置：与爬虫目录一致的全量配置"""
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -17,7 +18,7 @@ from common.domain import ArticleCategory  # noqa: E402
 
 
 def _insert(session, source: models.SourceORM, label: str) -> None:
-    """安全写入来源，若存在则跳过。"""
+    """安全写入来源，若已存在则跳过"""
 
     session.add(source)
     try:
@@ -31,6 +32,8 @@ def _insert(session, source: models.SourceORM, label: str) -> None:
 def main() -> None:
     session_factory = get_session_factory()
     with session_scope(session_factory) as session:
+        remote_cdp = os.getenv("NMPA_REMOTE_CDP_URL") or os.getenv("REMOTE_CDP_URL")
+
         # 前沿动态
         _insert(
             session,
@@ -54,22 +57,42 @@ def main() -> None:
             "药渡前沿",
         )
 
-        # CDE/医保局
+        # CDE / 医保局
+        _insert(
+            session,
+            models.SourceORM(
+                id="src_nhsa_policy_updates",
+                name="国家医保局 - 政策与动态（招标）",
+                label="医保政策与动态",
+                base_url="https://www.nhsa.gov.cn",
+                category=ArticleCategory.BIDDING,
+                is_active=True,
+                meta={
+                    "crawler_name": "nhsa_policy_updates",
+                    "crawler_meta": {
+                        "max_pages": 1,
+                        "page_size": 20,
+                        "list_url": "https://www.nhsa.gov.cn/col/col147/index.html",
+                    },
+                },
+            ),
+            "国家医保局 - 政策与动态（招标）",
+        )
         _insert(
             session,
             models.SourceORM(
                 id="src_nhsa_cde",
-                name="国家医保局 - 政策与动态",
+                name="国家医保局 - CDE 动态",
                 label="CDE 动态",
-                base_url="https://www.nhsa.gov.cn",
+                base_url="https://www.cde.org.cn",
                 category=ArticleCategory.CDE_TREND,
                 is_active=True,
                 meta={
                     "crawler_name": "nhsa_cde",
                     "crawler_meta": {
-                        "max_pages": 1,
-                        "page_size": 20,
-                        "list_url": "https://www.nhsa.gov.cn/col/col147/index.html",
+                        "max_items": 20,
+                        "list_url": "https://www.cde.org.cn/main/news/listpage/3cc45b396497b598341ce3af000490e5",
+                        "status": "operations",
                     },
                 },
             ),
@@ -125,23 +148,16 @@ def main() -> None:
             models.SourceORM(
                 id="src_nhsa_industry",
                 name="国家医保局 - 地方工作动态",
-                label="行业动态",
+                label="行业动态（停用）",
                 base_url="https://www.nhsa.gov.cn",
                 category=ArticleCategory.INDUSTRY_TREND,
-                is_active=True,
-                meta={
-                    "crawler_name": "nhsa_industry",
-                    "crawler_meta": {
-                        "max_pages": 1,
-                        "page_size": 20,
-                        "list_url": "https://www.nhsa.gov.cn/col/col193/index.html",
-                    },
-                },
+                is_active=False,
+                meta={},
             ),
-            "国家医保局 - 行业动态",
+            "国家医保局 - 行业动态（停用）",
         )
 
-        # CDE 法规/制度
+        # CDE 法规/制度/受理品种
         _insert(
             session,
             models.SourceORM(
@@ -182,6 +198,26 @@ def main() -> None:
             "CDE 中心制度",
         )
 
+        _insert(
+            session,
+            models.SourceORM(
+                id="src_cde_accepted_products",
+                name="CDE 受理品种信息",
+                label="受理品种信息",
+                base_url="https://www.cde.org.cn",
+                category=ArticleCategory.CDE_TREND,
+                is_active=True,
+                meta={
+                    "crawler_name": "cde_accepted_products",
+                    "crawler_meta": {
+                        "max_items": 20,
+                        "list_url": "https://www.cde.org.cn/main/xxgk/listpage/9f9c74c73e0f8f56a8bfbc646055026d",
+                    },
+                },
+            ),
+            "CDE 受理品种信息",
+        )
+
         # 扬州项目申报
         _insert(
             session,
@@ -204,6 +240,29 @@ def main() -> None:
                 },
             ),
             "扬州项目申报",
+        )
+
+        # NMPA 药品监管要闻
+        _insert(
+            session,
+            models.SourceORM(
+                id="src_nmpa_drug_news",
+                name="NMPA 药品监管要闻",
+                label="行业动态",
+                base_url="https://www.nmpa.gov.cn",
+                category=ArticleCategory.INDUSTRY_TREND,
+                is_active=True,
+                meta={
+                    "crawler_name": "nmpa_drug_news",
+                    "crawler_meta": {
+                        "max_pages": 1,
+                        "page_size": 20,
+                        "list_url": "https://www.nmpa.gov.cn/yaowen/ypjgyw/index.html",
+                        "remote_cdp_url": remote_cdp,
+                    },
+                },
+            ),
+            "NMPA 药品监管要闻（industry_trend）",
         )
 
         # 海外监管
