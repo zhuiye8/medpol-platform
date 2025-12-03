@@ -73,11 +73,12 @@ class CrawlerJobPayload(BaseModel):
 class CrawlerJobBase(BaseModel):
     name: str
     crawler_name: str
-    source_id: str
+    source_id: Optional[str] = None
     job_type: Literal["scheduled", "one_off"]
     schedule_cron: Optional[str] = None
     interval_minutes: Optional[int] = None
     payload: CrawlerJobPayload = Field(default_factory=CrawlerJobPayload)
+    retry_config: Dict[str, Any] = Field(default_factory=dict)
     enabled: bool = True
 
 
@@ -93,6 +94,7 @@ class CrawlerJobUpdate(BaseModel):
     schedule_cron: Optional[str] = None
     interval_minutes: Optional[int] = None
     payload: Optional[CrawlerJobPayload] = None
+    retry_config: Optional[Dict[str, Any]] = None
     enabled: Optional[bool] = None
 
 
@@ -100,11 +102,12 @@ class CrawlerJobItem(BaseModel):
     id: str
     name: str
     crawler_name: str
-    source_id: str
+    source_id: Optional[str] = None
     job_type: str
     schedule_cron: Optional[str]
     interval_minutes: Optional[int]
     payload: CrawlerJobPayload
+    retry_config: Dict[str, Any]
     enabled: bool
     next_run_at: Optional[datetime]
     last_run_at: Optional[datetime]
@@ -126,6 +129,10 @@ class CrawlerJobRunItem(BaseModel):
     finished_at: Optional[datetime]
     executed_crawler: str
     result_count: int
+    duration_ms: Optional[int] = None
+    retry_attempts: Optional[int] = None
+    error_type: Optional[str] = None
+    pipeline_run_id: Optional[str] = None
     log_path: Optional[str]
     error_message: Optional[str]
 
@@ -135,6 +142,7 @@ class CrawlerJobRunListData(BaseModel):
 
 
 class PipelineRunData(BaseModel):
+    run_id: Optional[str] = None
     crawled: int
     outbox_files: int
     outbox_processed: int
@@ -145,6 +153,40 @@ class PipelineRunData(BaseModel):
     ai_translation_enqueued: int
     ai_analysis_pending: int
     ai_analysis_enqueued: int
+    details: List["PipelineRunDetailItem"] = Field(default_factory=list)
+
+
+class PipelineRunDetailItem(BaseModel):
+    id: Optional[str] = None
+    crawler_name: str
+    source_id: Optional[str] = None
+    status: str
+    result_count: int
+    duration_ms: Optional[int] = None
+    attempt_number: Optional[int] = None
+    max_attempts: Optional[int] = None
+    error_type: Optional[str] = None
+    error_message: Optional[str] = None
+    log_path: Optional[str] = None
+
+
+class PipelineRunItem(BaseModel):
+    id: str
+    run_type: str
+    status: str
+    total_crawlers: int
+    successful_crawlers: int
+    failed_crawlers: int
+    total_articles: int
+    started_at: datetime
+    finished_at: Optional[datetime] = None
+    error_message: Optional[str] = None
+    details: List[PipelineRunDetailItem] = Field(default_factory=list)
+
+
+class PipelineRunListData(BaseModel):
+    items: List[PipelineRunItem]
+    total: int
 
 
 class CeleryStatus(BaseModel):

@@ -6,7 +6,8 @@ import logging
 import os
 import pkgutil
 from importlib import import_module
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
+from datetime import datetime
 
 from sqlalchemy.orm import Session
 
@@ -225,12 +226,33 @@ def _apply_quick_meta(meta: Dict) -> Dict:
     return new_meta
 
 
-def run_active_crawlers(session: Session | None = None, quick_mode: bool = False) -> int:
-    """运行所有可用配置，返回总条数；单个爬虫失败时记录错误并继续。"""
+def _default_retry_config(crawler_name: str) -> Dict:
+    stable = {"fda_guidance", "fda_press", "ema_whats_new", "pmda_whats_new"}
+    if crawler_name in stable:
+        return {"max_attempts": 1, "attempt_backoff": 1.5, "request": {"max_retries": 3}}
+    return {"max_attempts": 3, "attempt_backoff": 1.5, "request": {"max_retries": 4}}
+
+
+def _classify_error(exc: Exception) -> str:
+    text = str(exc).lower()
+    if "timeout" in text or "timed out" in text:
+        return "timeout"
+    if "403" in text or "412" in text or "anti" in text:
+        return "anti_spider"
+    if "parse" in text or "selector" in text or "keyerror" in text:
+        return "parse_error"
+    return "network"
+
+
+def run_active_crawlers(
+    session: Session | None = None, quick_mode: bool = False
+) -> Tuple[int, List[Dict]]:
+    """运行所有可用配置，返回总条数和每个爬虫的执行详情。"""
 
     _load_crawlers()
     configs = iter_configs(session=session, fallback=DEFAULT_CONFIGS)
     total = 0
+    details: List[Dict] = []
     for cfg in configs:
         runtime_cfg = cfg
         if quick_mode:
@@ -240,16 +262,79 @@ def run_active_crawlers(session: Session | None = None, quick_mode: bool = False
                 crawler_name=cfg.crawler_name,
                 meta=_apply_quick_meta(cfg.meta),
             )
-        try:
-            articles = run_crawler_config(runtime_cfg)
-            total += len(articles)
-        except KeyError as exc:
-            logger.error("跳过未注册的爬虫: %s", exc)
-            continue
-        except Exception:  # pylint: disable=broad-except
-            logger.exception("Crawler 运行失败，已跳过: %s", runtime_cfg.crawler_name)
-            continue
-    return total
+        retry_conf = runtime_cfg.meta.get("retry_config") or _default_retry_config(
+            runtime_cfg.crawler_name
+        )
+        max_attempts = int(retry_conf.get("max_attempts", 1) or 1)
+        attempt_backoff = float(retry_conf.get("attempt_backoff", 1.5) or 1.5)
+        attempt = 0
+        detail_entry = {
+            "crawler_name": runtime_cfg.crawler_name,
+            "source_id": runtime_cfg.source_id,
+            "status": "failed",
+            "result_count": 0,
+            "duration_ms": 0,
+            "attempt_number": 0,
+            "max_attempts": max_attempts,
+            "error_type": None,
+            "error_message": None,
+            "log_path": None,
+            "started_at": None,
+            "finished_at": None,
+            "meta": runtime_cfg.meta,
+            "retry_config": retry_conf,
+        }
+        while attempt < max_attempts:
+            attempt += 1
+            detail_entry["attempt_number"] = attempt
+            detail_entry["started_at"] = datetime.utcnow()
+            try:
+                import time
+
+                start_ts = time.time()
+                articles = run_crawler_config(runtime_cfg)
+                duration_ms = int((time.time() - start_ts) * 1000)
+                detail_entry["finished_at"] = datetime.utcnow()
+                count = len(articles)
+                total += count
+                detail_entry["result_count"] = count
+                detail_entry["duration_ms"] = duration_ms
+                if count <= 0:
+                    detail_entry["status"] = "failed"
+                    detail_entry["error_type"] = "no_data"
+                    detail_entry["error_message"] = "返回 0 条记录"
+                    if attempt >= max_attempts:
+                        break
+                    if attempt_backoff > 0:
+                        time.sleep(attempt_backoff ** attempt)
+                    continue
+                detail_entry["status"] = "success"
+                detail_entry["error_type"] = None
+                detail_entry["error_message"] = None
+                break
+            except KeyError as exc:
+                detail_entry["status"] = "failed"
+                detail_entry["error_type"] = "not_registered"
+                detail_entry["error_message"] = str(exc)
+                detail_entry["finished_at"] = datetime.utcnow()
+                logger.error("跳过未注册的爬虫: %s", exc)
+                break
+            except Exception as exc:  # pylint: disable=broad-except
+                err_type = _classify_error(exc)
+                detail_entry["status"] = "failed"
+                detail_entry["error_type"] = err_type
+                detail_entry["error_message"] = str(exc)
+                detail_entry["finished_at"] = datetime.utcnow()
+                logger.exception("Crawler 运行失败: %s", runtime_cfg.crawler_name)
+                if attempt >= max_attempts:
+                    break
+                if attempt_backoff > 0:
+                    import time
+
+                    time.sleep(attempt_backoff ** attempt)
+                continue
+        details.append(detail_entry)
+    return total, details
 
 
 if __name__ == "__main__":
@@ -257,7 +342,7 @@ if __name__ == "__main__":
     if database_url:
         session_factory = get_session_factory()
         with session_scope(session_factory) as session:
-            total = run_active_crawlers(session=session)
+            total, _ = run_active_crawlers(session=session)
     else:
-        total = run_active_crawlers()
+        total, _ = run_active_crawlers()
     print(f"已采集 {total} 条文章")

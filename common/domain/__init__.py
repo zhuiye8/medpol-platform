@@ -11,6 +11,8 @@ from .models import (
     ArticleCategory,
     CrawlerJob,
     CrawlerJobRun,
+    CrawlerPipelineRun,
+    CrawlerPipelineRunDetail,
 )
 
 __all__ = [
@@ -24,4 +26,6 @@ __all__ = [
     "ArticleCategory",
     "CrawlerJob",
     "CrawlerJobRun",
+    "CrawlerPipelineRun",
+    "CrawlerPipelineRunDetail",
 ]

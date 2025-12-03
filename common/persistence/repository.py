@@ -32,6 +32,36 @@ class SourceRepository:
     def add(self, source: models.SourceORM) -> None:
         self.session.add(source)
 
+    def get_by_crawler_name(self, crawler_name: str) -> Optional[models.SourceORM]:
+        stmt = select(models.SourceORM).where(
+            models.SourceORM.meta["crawler_name"].as_string() == crawler_name  # type: ignore[index]
+        )
+        return self.session.scalars(stmt).first()
+
+    def get_or_create_default(
+        self,
+        *,
+        crawler_name: str,
+        category: str,
+        label: str,
+        base_url: str | None = None,
+    ) -> models.SourceORM:
+        existing = self.get_by_crawler_name(crawler_name)
+        if existing:
+            return existing
+        source = models.SourceORM(
+            id=f"src_{crawler_name}",
+            name=f"{label}",
+            label=label,
+            base_url=base_url or f"https://{crawler_name}.example.com",
+            category=category,
+            is_active=True,
+            meta={"crawler_name": crawler_name},
+        )
+        self.session.add(source)
+        self.session.flush()
+        return source
+
 
 class ArticleRepository:
     """Article access helpers."""
@@ -278,6 +308,56 @@ class CrawlerJobRepository:
 
     def get_run(self, run_id: str) -> Optional[models.CrawlerJobRunORM]:
         return self.session.get(models.CrawlerJobRunORM, run_id)
+
+
+class PipelineRunRepository:
+    """Pipeline run access helpers."""
+
+    def __init__(self, session: Session) -> None:
+        self.session = session
+
+    def add_run(self, run: models.CrawlerPipelineRunORM) -> None:
+        self.session.add(run)
+
+    def add_detail(self, detail: models.CrawlerPipelineRunDetailORM) -> None:
+        self.session.add(detail)
+
+    def get_run(self, run_id: str) -> Optional[models.CrawlerPipelineRunORM]:
+        return self.session.get(models.CrawlerPipelineRunORM, run_id)
+
+    def list_runs(
+        self,
+        limit: int = 50,
+        offset: int = 0,
+        run_type: str | None = None,
+        status: str | None = None,
+    ) -> List[models.CrawlerPipelineRunORM]:
+        stmt = select(models.CrawlerPipelineRunORM).order_by(models.CrawlerPipelineRunORM.started_at.desc())
+        if run_type:
+            stmt = stmt.where(models.CrawlerPipelineRunORM.run_type == run_type)
+        if status:
+            stmt = stmt.where(models.CrawlerPipelineRunORM.status == status)
+        stmt = stmt.offset(offset).limit(limit)
+        return list(self.session.scalars(stmt))
+
+    def count_runs(self, run_type: str | None = None, status: str | None = None) -> int:
+        stmt = select(func.count()).select_from(models.CrawlerPipelineRunORM)
+        if run_type:
+            stmt = stmt.where(models.CrawlerPipelineRunORM.run_type == run_type)
+        if status:
+            stmt = stmt.where(models.CrawlerPipelineRunORM.status == status)
+        return int(self.session.scalar(stmt) or 0)
+
+    def list_details(self, run_id: str) -> List[models.CrawlerPipelineRunDetailORM]:
+        stmt = (
+            select(models.CrawlerPipelineRunDetailORM)
+            .where(models.CrawlerPipelineRunDetailORM.run_id == run_id)
+            .order_by(models.CrawlerPipelineRunDetailORM.started_at.desc())
+        )
+        return list(self.session.scalars(stmt))
+
+    def get_detail(self, detail_id: str) -> Optional[models.CrawlerPipelineRunDetailORM]:
+        return self.session.get(models.CrawlerPipelineRunDetailORM, detail_id)
 
 
 class FinanceRecordRepository:

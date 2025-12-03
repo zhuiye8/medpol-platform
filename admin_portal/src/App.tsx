@@ -2,7 +2,7 @@ import { BrowserRouter, NavLink, Route, Routes } from "react-router-dom";
 import DashboardPage from "@/pages/Dashboard";
 import ArticlesPage from "@/pages/Articles";
 import LogsPage from "@/pages/Logs";
-import SchedulerPage from "@/pages/Scheduler";
+import CrawlerManagementPage from "@/pages/CrawlerManagement";
 import ArticleDetailPage from "@/pages/ArticleDetail";
 import { useHealth } from "@/hooks/useHealth";
 
@@ -10,7 +10,7 @@ const NAV_ITEMS = [
   { path: "/", label: "概览" },
   { path: "/articles", label: "文章列表" },
   { path: "/logs", label: "运行日志" },
-  { path: "/scheduler", label: "任务调度" },
+  { path: "/crawler-management", label: "爬虫管理" },
 ];
 
 function StatusPill({ status }: { status: "loading" | "up" | "down" }) {
@@ -52,7 +52,7 @@ export default function App() {
             <Route path="/articles" element={<ArticlesPage />} />
             <Route path="/articles/:articleId" element={<ArticleDetailPage />} />
             <Route path="/logs" element={<LogsPage />} />
-            <Route path="/scheduler" element={<SchedulerPage />} />
+            <Route path="/crawler-management" element={<CrawlerManagementPage />} />
           </Routes>
         </main>
       </div>

@@ -132,6 +132,7 @@ class CrawlerJob(BaseModel):
     schedule_cron: Optional[str] = Field(None, description="Cron 表达式")
     interval_minutes: Optional[int] = Field(None, description="间隔分钟数")
     payload: dict = Field(default_factory=dict, description="运行参数，如 meta/limit")
+    retry_config: dict = Field(default_factory=dict, description="爬虫级重试与请求重试配置")
     enabled: bool = True
     next_run_at: Optional[datetime] = None
     last_run_at: Optional[datetime] = None
@@ -151,5 +152,44 @@ class CrawlerJobRun(BaseModel):
     executed_crawler: str
     params_snapshot: dict = Field(default_factory=dict)
     result_count: int = 0
+    duration_ms: Optional[int] = 0
+    retry_attempts: Optional[int] = 0
+    error_type: Optional[str] = None
+    pipeline_run_id: Optional[str] = None
     log_path: Optional[str] = None
     error_message: Optional[str] = None
+
+
+class CrawlerPipelineRun(BaseModel):
+    """Pipeline run summary."""
+
+    id: str
+    run_type: str
+    status: str
+    total_crawlers: int = 0
+    successful_crawlers: int = 0
+    failed_crawlers: int = 0
+    total_articles: int = 0
+    started_at: datetime
+    finished_at: Optional[datetime] = None
+    error_message: Optional[str] = None
+
+
+class CrawlerPipelineRunDetail(BaseModel):
+    """Pipeline run detail per crawler."""
+
+    id: str
+    run_id: str
+    crawler_name: str
+    source_id: Optional[str] = None
+    status: str
+    started_at: Optional[datetime] = None
+    finished_at: Optional[datetime] = None
+    duration_ms: Optional[int] = 0
+    attempt_number: Optional[int] = 0
+    max_attempts: Optional[int] = 0
+    result_count: int = 0
+    error_type: Optional[str] = None
+    error_message: Optional[str] = None
+    log_path: Optional[str] = None
+    config_snapshot: dict = Field(default_factory=dict)

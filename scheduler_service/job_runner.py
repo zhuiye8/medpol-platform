@@ -16,6 +16,7 @@ from common.persistence.repository import SourceRepository
 from common.persistence import models
 from crawler_service.config_loader import CrawlerRuntimeConfig
 from crawler_service.scheduler import run_crawler_config
+from datetime import datetime, timezone
 
 
 def _now() -> datetime:
@@ -68,7 +69,13 @@ def build_runtime_config(
     source_repo = SourceRepository(session)
     source = source_repo.get_by_id(job.source_id)
     if not source:
-        raise ValueError(f"未找到 source: {job.source_id}")
+        source = source_repo.get_or_create_default(
+            crawler_name=job.crawler_name,
+            category=payload.get("meta", {}).get("category") or "frontier",
+            label=job.name or job.crawler_name,
+            base_url=f"https://{job.crawler_name}.example.com",
+        )
+        session.flush()
 
     meta = payload.get("meta") or {}
     return CrawlerRuntimeConfig(
@@ -90,5 +97,45 @@ def execute_job_once(
     payload.update(run.params_snapshot or {})
 
     runtime_config = build_runtime_config(job, payload, session)
-    articles = run_crawler_config(runtime_config)
-    return len(articles)
+    retry_conf = runtime_config.meta.get("retry_config") or job.retry_config or {}
+    max_attempts = int(retry_conf.get("max_attempts", 1) or 1)
+    attempt_backoff = float(retry_conf.get("attempt_backoff", 1.5) or 1.5)
+
+    last_exc: Exception | None = None
+    attempts = 0
+    import time
+
+    while attempts < max_attempts:
+        attempts += 1
+        try:
+            start_ts = time.time()
+            articles = run_crawler_config(runtime_config)
+            duration_ms = int((time.time() - start_ts) * 1000)
+            run.duration_ms = duration_ms
+            run.retry_attempts = attempts
+            run.error_type = None
+            run.error_message = None
+            run.started_at = run.started_at or datetime.now(timezone.utc)
+            run.finished_at = datetime.now(timezone.utc)
+            return len(articles)
+        except Exception as exc:  # pylint: disable=broad-except
+            last_exc = exc
+            run.retry_attempts = attempts
+            err_text = str(exc).lower()
+            if "timeout" in err_text:
+                run.error_type = "timeout"
+            elif "403" in err_text or "412" in err_text or "anti" in err_text:
+                run.error_type = "anti_spider"
+            elif "parse" in err_text or "selector" in err_text or "keyerror" in err_text:
+                run.error_type = "parse_error"
+            else:
+                run.error_type = "network"
+            run.error_message = str(exc)
+            run.started_at = run.started_at or datetime.now(timezone.utc)
+            run.finished_at = datetime.now(timezone.utc)
+            if attempts >= max_attempts:
+                break
+            time.sleep(attempt_backoff ** attempts)
+            continue
+    assert last_exc is not None
+    raise last_exc

@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import type { CrawlerJobItem, CrawlerMeta, CrawlerJobRun } from "@/types/scheduler";
+import type {
+  CrawlerJobItem,
+  CrawlerMeta,
+  CrawlerJobRun,
+  PipelineRunList,
+  PipelineRunItem,
+} from "@/types/scheduler";
 import {
   fetchJobs,
   fetchCrawlerMeta,
@@ -11,6 +17,11 @@ import {
   runPipelineQuick,
   fetchCeleryHealth,
   resetPipelineData,
+  fetchPipelineRuns,
+  fetchPipelineRun,
+  retryPipelineDetail,
+  fetchPipelineDetailLog,
+  fetchJobRunLog,
 } from "@/services/scheduler";
 import type { CeleryHealth, ResetResult } from "@/types/scheduler";
 
@@ -22,6 +33,8 @@ export function useScheduler() {
   const [celeryStatus, setCeleryStatus] = useState<CeleryHealth | null>(null);
   const [celeryError, setCeleryError] = useState<string | null>(null);
   const [lastReset, setLastReset] = useState<ResetResult | null>(null);
+  const [pipelineRuns, setPipelineRuns] = useState<PipelineRunList | null>(null);
+  const [runDetail, setRunDetail] = useState<PipelineRunItem | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -61,6 +74,30 @@ export function useScheduler() {
     return result;
   }, []);
 
+  const loadPipelineRuns = useCallback(
+    async (params?: { limit?: number; offset?: number; run_type?: string; status?: string }) => {
+      const data = await fetchPipelineRuns(params);
+      setPipelineRuns(data);
+      return data;
+    },
+    []
+  );
+
+  const loadPipelineRun = useCallback(async (runId: string) => {
+    const data = await fetchPipelineRun(runId);
+    setRunDetail(data);
+    return data;
+  }, []);
+
+  const retryDetail = useCallback(async (detailId: string) => retryPipelineDetail(detailId), []);
+
+  const loadPipelineDetailLog = useCallback(
+    async (detailId: string, limit?: number) => fetchPipelineDetailLog(detailId, limit),
+    []
+  );
+
+  const loadJobRunLog = useCallback(async (runId: string, limit?: number) => fetchJobRunLog(runId, limit), []);
+
   return {
     jobs,
     metas,
@@ -78,5 +115,12 @@ export function useScheduler() {
     resetData,
     lastReset,
     runPipelineQuick,
+    pipelineRuns,
+    runDetail,
+    loadPipelineRuns,
+    loadPipelineRun,
+    retryDetail,
+    loadPipelineDetailLog,
+    loadJobRunLog,
   };
 }

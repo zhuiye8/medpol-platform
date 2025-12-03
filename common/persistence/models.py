@@ -138,6 +138,7 @@ class CrawlerJobORM(TimestampMixin, Base):
     schedule_cron: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     interval_minutes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     payload: Mapped[dict] = mapped_column(JSON, default=dict)
+    retry_config: Mapped[dict] = mapped_column(JSON, default=dict)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     next_run_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     last_run_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
@@ -162,10 +163,61 @@ class CrawlerJobRunORM(Base):
     executed_crawler: Mapped[str] = mapped_column(String(128))
     params_snapshot: Mapped[dict] = mapped_column(JSON, default=dict)
     result_count: Mapped[int] = mapped_column(Integer, default=0)
+    duration_ms: Mapped[Optional[int]] = mapped_column(Integer, default=0)
+    retry_attempts: Mapped[Optional[int]] = mapped_column(Integer, default=0)
+    error_type: Mapped[Optional[str]] = mapped_column(String(32))
+    pipeline_run_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     log_path: Mapped[Optional[str]] = mapped_column(String(255))
     error_message: Mapped[Optional[str]] = mapped_column(Text)
 
     job: Mapped["CrawlerJobORM"] = relationship(back_populates="runs")
+
+
+class CrawlerPipelineRunORM(Base):
+    """Pipeline run summary."""
+
+    __tablename__ = "crawler_pipeline_runs"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    run_type: Mapped[str] = mapped_column(String(16))  # quick/full/job/manual_retry
+    status: Mapped[str] = mapped_column(String(16))
+    total_crawlers: Mapped[int] = mapped_column(Integer, default=0)
+    successful_crawlers: Mapped[int] = mapped_column(Integer, default=0)
+    failed_crawlers: Mapped[int] = mapped_column(Integer, default=0)
+    total_articles: Mapped[int] = mapped_column(Integer, default=0)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    error_message: Mapped[Optional[str]] = mapped_column(Text)
+
+    details: Mapped[List["CrawlerPipelineRunDetailORM"]] = relationship(
+        back_populates="run", cascade="all, delete-orphan"
+    )
+
+
+class CrawlerPipelineRunDetailORM(Base):
+    """Pipeline run detail per crawler."""
+
+    __tablename__ = "crawler_pipeline_run_details"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    run_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("crawler_pipeline_runs.id", ondelete="CASCADE")
+    )
+    crawler_name: Mapped[str] = mapped_column(String(128))
+    source_id: Mapped[Optional[str]] = mapped_column(String(36))
+    status: Mapped[str] = mapped_column(String(16))
+    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    duration_ms: Mapped[Optional[int]] = mapped_column(Integer, default=0)
+    attempt_number: Mapped[Optional[int]] = mapped_column(Integer, default=0)
+    max_attempts: Mapped[Optional[int]] = mapped_column(Integer, default=0)
+    result_count: Mapped[int] = mapped_column(Integer, default=0)
+    error_type: Mapped[Optional[str]] = mapped_column(String(32))
+    error_message: Mapped[Optional[str]] = mapped_column(Text)
+    log_path: Mapped[Optional[str]] = mapped_column(String(255))
+    config_snapshot: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
+
+    run: Mapped["CrawlerPipelineRunORM"] = relationship(back_populates="details")
 
 
 class FinanceSyncLogORM(TimestampMixin, Base):
