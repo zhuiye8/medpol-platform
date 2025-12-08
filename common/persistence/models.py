@@ -20,6 +20,7 @@ from sqlalchemy import (
     Text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from pgvector.sqlalchemy import Vector
 
 from common.domain import ArticleCategory
 
@@ -271,12 +272,19 @@ class FinanceRecordORM(TimestampMixin, Base):
     sync_log: Mapped[Optional["FinanceSyncLogORM"]] = relationship(back_populates="records")
 
 
-class ConversationSessionORM(TimestampMixin, Base):
-    """Conversation memory storage."""
+class ArticleEmbeddingORM(TimestampMixin, Base):
+    """Article embeddings for RAG."""
 
-    __tablename__ = "conversation_sessions"
+    __tablename__ = "article_embeddings"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    persona: Mapped[Optional[str]] = mapped_column(String(32), default="general")
-    summary: Mapped[str] = mapped_column(Text, default="")
-    messages_json: Mapped[List[dict]] = mapped_column(JSON, default=list)
+    article_id: Mapped[str] = mapped_column(
+        String(64),
+        ForeignKey("articles.id", ondelete="CASCADE"),
+    )
+    chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    chunk_text: Mapped[str] = mapped_column(Text, nullable=False)
+    embedding: Mapped[list[float]] = mapped_column(Vector(1024))
+    model_name: Mapped[str] = mapped_column(String(64), nullable=False)
+
+    article: Mapped["ArticleORM"] = relationship()

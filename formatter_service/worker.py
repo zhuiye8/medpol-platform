@@ -125,7 +125,8 @@ def _to_article(raw: RawArticle) -> Article:
     content_source = mapped.get("content_source") or raw.content_source
     original_language = (mapped.get("original_source_language") or "").lower()
     if not original_language:
-        original_language = detect_language(soup_text)
+        _, detected_lang, _ = detect_language(soup_text)
+        original_language = detected_lang
 
     return Article(
         id=raw.article_id,

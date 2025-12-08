@@ -12,7 +12,7 @@ services:
       - medpol-net
 
   postgres:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg16
     container_name: medpol-postgres
     environment:
       POSTGRES_USER: medpol

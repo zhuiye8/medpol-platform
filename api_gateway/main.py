@@ -12,7 +12,8 @@ from common.utils.env import load_env
 # 确保 .env 已加载，便于 uvicorn 直接运行
 load_env()
 
-from .routers import admin, articles, scheduler, ai_chat
+from .routers import admin, articles, scheduler
+from ai_chat.core import router as ai_chat_router
 
 
 def _load_allowed_origins() -> tuple[list[str], bool]:
@@ -65,7 +66,7 @@ app.add_middleware(
 app.include_router(articles.router, prefix="/v1/articles", tags=["articles"])
 app.include_router(admin.router, prefix="/v1/admin", tags=["admin"])
 app.include_router(scheduler.router, prefix="/v1", tags=["scheduler"])
-app.include_router(ai_chat.router, prefix="/v1/ai", tags=["ai-chat"])
+app.include_router(ai_chat_router, prefix="/v1/ai", tags=["ai-chat-new"])
 
 
 @app.get("/healthz")

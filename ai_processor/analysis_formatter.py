@@ -1,4 +1,7 @@
-"""Format and normalize AI analysis outputs."""
+"""Format and normalize AI analysis outputs.
+
+DEPRECATED: 已由 Pydantic Schema 严格校验替代，仅保留给历史修复脚本使用。
+"""
 
 from __future__ import annotations
 
