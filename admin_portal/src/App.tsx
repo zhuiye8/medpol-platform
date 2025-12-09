@@ -4,6 +4,8 @@ import ArticlesPage from "@/pages/Articles";
 import LogsPage from "@/pages/Logs";
 import CrawlerManagementPage from "@/pages/CrawlerManagement";
 import ArticleDetailPage from "@/pages/ArticleDetail";
+import FinanceDataPage from "@/pages/FinanceData";
+import EmbeddingsPage from "@/pages/Embeddings";
 import { useHealth } from "@/hooks/useHealth";
 
 const NAV_ITEMS = [
@@ -11,6 +13,8 @@ const NAV_ITEMS = [
   { path: "/articles", label: "文章列表" },
   { path: "/logs", label: "运行日志" },
   { path: "/crawler-management", label: "爬虫管理" },
+  { path: "/finance", label: "财务数据" },
+  { path: "/embeddings", label: "向量化" },
 ];
 
 function StatusPill({ status }: { status: "loading" | "up" | "down" }) {
@@ -53,6 +57,8 @@ export default function App() {
             <Route path="/articles/:articleId" element={<ArticleDetailPage />} />
             <Route path="/logs" element={<LogsPage />} />
             <Route path="/crawler-management" element={<CrawlerManagementPage />} />
+            <Route path="/finance" element={<FinanceDataPage />} />
+            <Route path="/embeddings" element={<EmbeddingsPage />} />
           </Routes>
         </main>
       </div>

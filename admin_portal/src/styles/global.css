@@ -391,3 +391,28 @@ button.ghost {
   align-items: center;
   justify-content: space-between;
 }
+
+.panel__title {
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.panel__value {
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.panel.small {
+  padding: 12px;
+  min-width: 150px;
+}
+
+.error-banner {
+  background: rgba(248, 113, 113, 0.12);
+  color: #b91c1c;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+}

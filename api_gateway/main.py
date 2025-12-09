@@ -5,36 +5,38 @@ from __future__ import annotations
 import os
 import logging
 from logging.handlers import RotatingFileHandler
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from common.utils.env import load_env
 
-# 确保 .env 已加载，便于 uvicorn 直接运行
+# ensure .env is loaded for uvicorn direct run
 load_env()
 
 from .routers import admin, articles, scheduler
+from api_gateway.routers import admin_finance, admin_embeddings
 from ai_chat.core import router as ai_chat_router
 
 
-def _load_allowed_origins() -> tuple[list[str], bool]:
-    """读取前端允许的域名，未配置则默认放开。"""
+def _load_allowed_origins() -> tuple[list[str], bool, str | None]:
+    """Read allowed origins for Admin Portal; default to open."""
 
     raw = os.getenv("ADMIN_PORTAL_ORIGINS", "")
     origins = [item.strip() for item in raw.split(",") if item.strip()]
     if not origins:
-        # 默认开放，API 和 Admin Portal 联调更方便
-        return ["*"], False
-    return origins, True
+        # default open; admin portal local dev works without extra config
+        return ["*"], False, ".*"
+    return origins, True, None
 
 
 app = FastAPI(title="Med Policy Platform API", version="0.1.0")
-allow_origins, allow_credentials = _load_allowed_origins()
+allow_origins, allow_credentials, allow_origin_regex = _load_allowed_origins()
 
-# 记录到文件日志（可选）；未设置 LOG_FILE_PATH 则输出到标准输出
+# logging setup: stdout by default, optional file rotating
 log_file = os.getenv("LOG_FILE_PATH")
 log_level = os.getenv("LOG_LEVEL", "INFO").upper()
 root_logger = logging.getLogger()
-# 若未设置处理器，则默认输出到标准输出
 if not root_logger.handlers:
     stream_handler = logging.StreamHandler()
     stream_handler.setFormatter(
@@ -62,15 +64,19 @@ app.add_middleware(
     allow_credentials=allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
+    allow_origin_regex=allow_origin_regex,
 )
+
 app.include_router(articles.router, prefix="/v1/articles", tags=["articles"])
 app.include_router(admin.router, prefix="/v1/admin", tags=["admin"])
 app.include_router(scheduler.router, prefix="/v1", tags=["scheduler"])
 app.include_router(ai_chat_router, prefix="/v1/ai", tags=["ai-chat-new"])
+app.include_router(admin_finance.router, prefix="/v1/admin", tags=["admin-finance"])
+app.include_router(admin_embeddings.router, prefix="/v1/admin", tags=["admin-embeddings"])
 
 
 @app.get("/healthz")
 async def health_check() -> dict:
-    """存活检查。"""
+    """Liveness probe."""
 
     return {"code": 0, "msg": "success", "data": {"status": "ok"}}

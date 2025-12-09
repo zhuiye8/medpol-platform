@@ -18,6 +18,13 @@ from common.persistence import models as orm_models
 from common.persistence.repository import ArticleRepository, SourceRepository
 from .utils import apply_field_mapping, clean_html, normalize_text
 from .language import detect_language
+from datetime import datetime, timedelta
+
+# finance sync / embeddings
+from common.finance_sync.fetcher import FinanceDataFetcherError
+from common.finance_sync.service import FinanceDataSyncError, FinanceDataSyncService
+from ai_chat.vanna.vectorstore import add_documents
+from scripts.index_articles import _chunk_text, chunk_articles
 
 load_env()
 
@@ -229,6 +236,79 @@ def normalize_article(raw_article: dict) -> dict:
     """Celery 任务：清洗并入库。"""
 
     return process_raw_article(raw_article)
+
+
+# --------- Admin-triggered tasks: finance sync & embeddings index ---------
+
+
+def _parse_month(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+    value = value.strip()
+    if len(value) == 7:
+        value = f"{value}-01"
+    datetime.strptime(value, "%Y-%m-%d")
+    return value
+
+
+@celery_app.task(name="formatter.finance_sync", queue=FORMATTER_QUEUE)
+def task_finance_sync(month: Optional[str] = None, dry_run: bool = False) -> dict:
+    """Trigger finance data sync (optionally single month)."""
+
+    try:
+        keep_date = _parse_month(month)
+        service = FinanceDataSyncService()
+        stats = service.sync(keep_date=keep_date, dry_run=dry_run)
+        return {"status": "ok", **stats}
+    except (FinanceDataFetcherError, FinanceDataSyncError, ValueError) as exc:
+        return {"status": "error", "error": str(exc)}
+    except Exception as exc:  # pragma: no cover - unexpected
+        return {"status": "error", "error": str(exc)}
+
+
+def _select_articles_for_index(
+    session,
+    article_ids: Optional[list[str]] = None,
+    days: Optional[int] = None,
+    limit: Optional[int] = None,
+):
+    if article_ids:
+        return (
+            session.query(orm_models.ArticleORM)
+            .filter(orm_models.ArticleORM.id.in_(article_ids))
+            .all()
+        )
+    if days:
+        cutoff = datetime.utcnow() - timedelta(days=days)
+        q = session.query(orm_models.ArticleORM).filter(orm_models.ArticleORM.publish_time >= cutoff)
+        if limit:
+            q = q.limit(limit)
+        return q.all()
+    repo = ArticleRepository(session)
+    return repo.list_recent(limit=limit or 1000)
+
+
+@celery_app.task(name="formatter.embeddings_index", queue=FORMATTER_QUEUE)
+def task_embeddings_index(
+    article_ids: Optional[list[str]] = None,
+    all_articles: bool = False,
+    days: Optional[int] = None,
+    limit: Optional[int] = None,
+) -> dict:
+    """Trigger embeddings indexing for articles."""
+
+    try:
+        session_factory = get_session_factory()
+        with session_scope(session_factory) as session:
+            if all_articles:
+                articles = session.query(orm_models.ArticleORM).all()
+            else:
+                articles = _select_articles_for_index(session, article_ids=article_ids, days=days, limit=limit)
+        docs = chunk_articles(articles)
+        added = add_documents(docs)
+        return {"status": "ok", "articles": len(articles), "chunks_indexed": added}
+    except Exception as exc:  # pragma: no cover - unexpected
+        return {"status": "error", "error": str(exc)}
 
 
 def _persist_article(article: Article) -> None:
