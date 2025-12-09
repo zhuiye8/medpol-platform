@@ -40,6 +40,23 @@ export interface FinanceSyncLog {
   error_message: string | null;
 }
 
+export interface FinanceCompany {
+  company_no: string;
+  company_name: string;
+  level: string | null;
+}
+
+export interface FinanceType {
+  type_no: string;
+  type_name: string;
+}
+
+export interface FinanceMeta {
+  months: string[];
+  companies: FinanceCompany[];
+  types: FinanceType[];
+}
+
 export interface EmbeddingStats {
   total_articles: number;
   embedded_articles: number;

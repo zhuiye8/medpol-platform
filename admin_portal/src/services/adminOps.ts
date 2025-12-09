@@ -3,6 +3,7 @@ import type {
   EmbeddingArticle,
   EmbeddingChunk,
   EmbeddingStats,
+  FinanceMeta,
   FinanceRecord,
   FinanceStats,
   FinanceSyncLog,
@@ -23,8 +24,15 @@ export async function fetchFinanceStats(): Promise<FinanceStats> {
   return unwrap(resp);
 }
 
+export async function fetchFinanceMeta(): Promise<FinanceMeta> {
+  const resp = await apiRequest<AdminResp<FinanceMeta>>("/v1/admin/finance/meta");
+  return unwrap(resp);
+}
+
 export async function fetchFinanceRecords(params?: {
   company_no?: string;
+  month?: string;
+  type_no?: string;
   start_date?: string;
   end_date?: string;
   limit?: number;
@@ -32,9 +40,11 @@ export async function fetchFinanceRecords(params?: {
   const resp = await apiRequest<AdminResp<FinanceRecord[]>>("/v1/admin/finance/records", {
     query: {
       company_no: params?.company_no,
+      month: params?.month,
+      type_no: params?.type_no,
       start_date: params?.start_date,
       end_date: params?.end_date,
-      limit: params?.limit ?? 50,
+      limit: params?.limit ?? 500,
     },
   });
   return unwrap(resp);

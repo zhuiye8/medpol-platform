@@ -1,32 +1,30 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import {
+  fetchFinanceMeta,
   fetchFinanceRecords,
   fetchFinanceStats,
   fetchFinanceSyncLogs,
   fetchTaskStatus,
   triggerFinanceSync,
 } from "@/services/adminOps";
-import type { FinanceRecord, FinanceStats, FinanceSyncLog } from "@/types/admin";
+import type {
+  FinanceMeta,
+  FinanceRecord,
+  FinanceStats,
+  FinanceSyncLog,
+} from "@/types/admin";
 
 const TERMINAL_STATES = ["SUCCESS", "FAILURE", "REVOKED"];
 
-// 子公司数据结构（从 raw_payload.subCompany 解析）
-interface SubCompany {
-  id: number;
-  companyNo: string;
-  companyName: string;
-  typeNo: string;
-  typeName?: string;
-  currentAmt: number | null;
-  lastYearAmt: number | null;
-  addAmt: number | null;
-  addRate: number | null;
-  thisYearTotalAmt: number | null;
-  lastYearTotalAmt: number | null;
-  yearAddAmt: number | null;
-  yearAddRate: number | null;
-  level: string;
+// 指标类型顺序（按业务重要性排列）
+const TYPE_ORDER = ["01", "02", "06", "03", "04", "05", "07", "08"];
+
+interface CompanyData {
+  company_no: string;
+  company_name: string;
+  level: string | null;
+  metrics: Record<string, FinanceRecord>;
 }
 
 function formatAmount(num: number | null | undefined): string {
@@ -37,53 +35,60 @@ function formatAmount(num: number | null | undefined): string {
 function formatPercent(num: number | null | undefined): string {
   if (num === null || num === undefined) return "-";
   const val = Number(num);
-  // API 返回的可能是小数形式（0.23）或百分比形式（23）
-  const pct = Math.abs(val) > 1 ? val : val * 100;
-  return `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`;
+  return `${val >= 0 ? "+" : ""}${val.toFixed(2)}%`;
 }
 
-function getSubCompanies(record: FinanceRecord): SubCompany[] {
-  const raw = record.raw_payload;
-  if (!raw || !Array.isArray(raw.subCompany)) return [];
-  return raw.subCompany as SubCompany[];
+function getPercentColor(val: number | null | undefined): string {
+  if (val === null || val === undefined) return "#64748b";
+  return val >= 0 ? "#22c55e" : "#ef4444";
 }
 
 export default function FinanceDataPage() {
   const [stats, setStats] = useState<FinanceStats | null>(null);
+  const [meta, setMeta] = useState<FinanceMeta | null>(null);
   const [records, setRecords] = useState<FinanceRecord[]>([]);
   const [logs, setLogs] = useState<FinanceSyncLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const [taskId, setTaskId] = useState<string | null>(null);
   const [taskState, setTaskState] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
 
-  const [companyFilter, setCompanyFilter] = useState("");
-  const [limit, setLimit] = useState(50);
+  // 筛选条件
+  const [selectedMonth, setSelectedMonth] = useState<string>("");
+  const [selectedCompany, setSelectedCompany] = useState<string>(""); // "" 表示全部
 
-  // Tab 状态：logs | data
-  const [activeTab, setActiveTab] = useState<"logs" | "data">("data");
+  // Tab 状态
+  const [activeTab, setActiveTab] = useState<"data" | "logs">("data");
 
-  const coverageText = useMemo(() => {
-    if (!stats?.date_coverage) return "-";
-    const { min, max } = stats.date_coverage;
-    if (!min && !max) return "-";
-    return `${min ?? "?"} ~ ${max ?? "?"}`;
-  }, [stats]);
+  // 加载元数据
+  useEffect(() => {
+    fetchFinanceMeta()
+      .then((data) => {
+        setMeta(data);
+        // 默认选择最新月份
+        if (data.months.length > 0 && !selectedMonth) {
+          setSelectedMonth(data.months[0]);
+        }
+      })
+      .catch(console.error);
+  }, []);
 
+  // 加载数据
   async function loadData() {
+    if (!selectedMonth) return;
+
     setLoading(true);
     setError(null);
     try {
       const [statsResp, recordsResp, logsResp] = await Promise.all([
         fetchFinanceStats(),
         fetchFinanceRecords({
-          company_no: companyFilter || undefined,
-          limit,
+          month: selectedMonth,
+          company_no: selectedCompany || undefined,
         }),
-        fetchFinanceSyncLogs(50),
+        fetchFinanceSyncLogs(20),
       ]);
       setStats(statsResp);
       setRecords(recordsResp);
@@ -96,10 +101,13 @@ export default function FinanceDataPage() {
   }
 
   useEffect(() => {
-    loadData();
+    if (selectedMonth) {
+      loadData();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selectedMonth, selectedCompany]);
 
+  // 任务轮询
   useEffect(() => {
     if (!taskId) return;
     setSyncing(true);
@@ -126,34 +134,59 @@ export default function FinanceDataPage() {
   async function handleSync() {
     setError(null);
     try {
-      const res = await triggerFinanceSync();
+      const res = await triggerFinanceSync(selectedMonth || undefined);
       setTaskId(res.task_id);
     } catch (err) {
       setError((err as Error).message || "触发同步失败");
     }
   }
 
-  async function handleFilterApply() {
-    await loadData();
-  }
+  // 按公司分组数据
+  const groupedData = useMemo(() => {
+    const groups: Record<string, CompanyData> = {};
 
-  function toggleExpand(id: string) {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
+    for (const rec of records) {
+      const key = rec.company_no;
+      if (!groups[key]) {
+        groups[key] = {
+          company_no: rec.company_no,
+          company_name: rec.company_name,
+          level: rec.level,
+          metrics: {},
+        };
       }
-      return next;
+      if (rec.type_no) {
+        groups[key].metrics[rec.type_no] = rec;
+      }
+    }
+
+    // 按 level 排序（一级公司在前）
+    return Object.values(groups).sort((a, b) => {
+      if (a.level === "0" && b.level !== "0") return -1;
+      if (a.level !== "0" && b.level === "0") return 1;
+      return a.company_name.localeCompare(b.company_name);
     });
-  }
+  }, [records]);
+
+  // 获取当前使用的指标类型（按顺序）
+  const activeTypes = useMemo(() => {
+    if (!meta?.types) return [];
+    const typesMap = new Map(meta.types.map((t) => [t.type_no, t]));
+    return TYPE_ORDER.filter((no) => typesMap.has(no)).map((no) => typesMap.get(no)!);
+  }, [meta]);
+
+  const coverageText = useMemo(() => {
+    if (!stats?.date_coverage) return "-";
+    const { min, max } = stats.date_coverage;
+    if (!min && !max) return "-";
+    return `${min ?? "?"} ~ ${max ?? "?"}`;
+  }, [stats]);
 
   return (
     <div>
       <div className="page-header">
         <h1>财务数据</h1>
-        <p style={{ color: "#475569", margin: 0 }}>查看/刷新财务流水，同步任务状态可在此监控</p>
+        <p style={{ color: "#475569", margin: 0 }}>按月份查看各公司财务指标，支持同步最新数据</p>
       </div>
 
       {/* 统计卡片 */}
@@ -169,47 +202,60 @@ export default function FinanceDataPage() {
           </div>
         </div>
         <div className="panel">
-          <div className="panel__title">日期覆盖</div>
+          <div className="panel__title">数据覆盖</div>
           <div className="panel__value">{coverageText}</div>
         </div>
         <div className="panel">
           <div className="panel__title">任务状态</div>
-          <div className="panel__value" style={{ color: taskState === "SUCCESS" ? "#22c55e" : taskState === "FAILURE" ? "#ef4444" : undefined }}>
+          <div
+            className="panel__value"
+            style={{
+              color:
+                taskState === "SUCCESS" ? "#22c55e" : taskState === "FAILURE" ? "#ef4444" : undefined,
+            }}
+          >
             {taskState || "未触发"}
           </div>
         </div>
       </div>
 
-      {/* 工具栏 */}
+      {/* 筛选工具栏 */}
       <div className="toolbar" style={{ marginTop: 16 }}>
-        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-          <label style={{ fontSize: 13 }}>
-            公司编号：
-            <input
-              value={companyFilter}
-              onChange={(e) => setCompanyFilter(e.target.value)}
-              placeholder="如 lhjt"
-              style={{ marginLeft: 6, width: 100 }}
-            />
+        <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
+          <label style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
+            月份：
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              style={{ minWidth: 120 }}
+            >
+              {meta?.months.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
           </label>
-          <label style={{ fontSize: 13 }}>
-            条数：
-            <input
-              type="number"
-              min={1}
-              max={500}
-              value={limit}
-              onChange={(e) => setLimit(Number(e.target.value) || 50)}
-              style={{ marginLeft: 6, width: 60 }}
-            />
+          <label style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
+            公司：
+            <select
+              value={selectedCompany}
+              onChange={(e) => setSelectedCompany(e.target.value)}
+              style={{ minWidth: 140 }}
+            >
+              <option value="">全部公司</option>
+              {meta?.companies.map((c) => (
+                <option key={c.company_no} value={c.company_no}>
+                  {c.company_name}
+                  {c.level === "0" ? " [集团]" : ""}
+                </option>
+              ))}
+            </select>
           </label>
-          <button className="ghost" onClick={handleFilterApply} disabled={loading}>
-            查询
-          </button>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={handleSync} disabled={syncing}>
-            {syncing ? "同步中..." : "一键同步"}
+            {syncing ? "同步中..." : "同步数据"}
           </button>
           <button className="ghost" onClick={loadData} disabled={loading}>
             刷新
@@ -217,7 +263,7 @@ export default function FinanceDataPage() {
         </div>
       </div>
 
-      {error ? <div className="error-banner">错误：{error}</div> : null}
+      {error && <div className="error-banner">错误：{error}</div>}
 
       {/* Tab 切换 */}
       <div style={{ display: "flex", gap: 0, marginTop: 16, borderBottom: "2px solid #e2e8f0" }}>
@@ -233,7 +279,7 @@ export default function FinanceDataPage() {
             borderRadius: "8px 8px 0 0",
           }}
         >
-          财务数据 ({records.length})
+          财务数据 ({groupedData.length} 家)
         </button>
         <button
           onClick={() => setActiveTab("logs")}
@@ -251,113 +297,116 @@ export default function FinanceDataPage() {
         </button>
       </div>
 
-      {/* Tab 内容 */}
+      {/* 数据内容 */}
       {activeTab === "data" ? (
         <div className="panel" style={{ marginTop: 0, borderTopLeftRadius: 0 }}>
-          {!records.length ? (
-            <div className="empty-state">暂无数据</div>
+          {loading ? (
+            <div className="empty-state">加载中...</div>
+          ) : !groupedData.length ? (
+            <div className="empty-state">暂无数据，请选择月份</div>
           ) : (
             <div style={{ overflowX: "auto" }}>
-              <table className="list-table" style={{ minWidth: 900 }}>
+              <table className="list-table" style={{ minWidth: 1200 }}>
                 <thead>
                   <tr>
-                    <th style={{ width: 50 }} />
-                    <th>记账日期</th>
-                    <th>公司名称</th>
-                    <th>科目类型</th>
-                    <th style={{ textAlign: "right" }}>本期金额</th>
-                    <th style={{ textAlign: "right" }}>去年同期</th>
-                    <th style={{ textAlign: "right" }}>同比增长</th>
-                    <th>子公司</th>
+                    <th style={{ position: "sticky", left: 0, background: "#f8fafc", zIndex: 1 }}>
+                      公司名称
+                    </th>
+                    {activeTypes.map((t) => (
+                      <th key={t.type_no} colSpan={2} style={{ textAlign: "center" }}>
+                        {t.type_name}
+                      </th>
+                    ))}
+                  </tr>
+                  <tr style={{ fontSize: 12, color: "#64748b" }}>
+                    <th style={{ position: "sticky", left: 0, background: "#f8fafc", zIndex: 1 }} />
+                    {activeTypes.map((t) => (
+                      <Fragment key={`header-${t.type_no}`}>
+                        <th style={{ textAlign: "right", fontWeight: 400 }}>本期金额</th>
+                        <th style={{ textAlign: "right", fontWeight: 400 }}>同比</th>
+                      </Fragment>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {records.map((rec) => {
-                    const subs = getSubCompanies(rec);
-                    const isExpanded = expanded.has(rec.id);
-                    return (
-                      <Fragment key={rec.id}>
-                        {/* 父公司行 */}
-                        <tr style={{ background: rec.level === "0" ? "#f8fafc" : undefined }}>
-                          <td>
-                            {subs.length > 0 && (
-                              <button
-                                className="ghost"
-                                onClick={() => toggleExpand(rec.id)}
-                                style={{ padding: "2px 8px", fontSize: 12 }}
-                              >
-                                {isExpanded ? "▼" : "▶"}
-                              </button>
-                            )}
-                          </td>
-                          <td>{rec.keep_date ? dayjs(rec.keep_date).format("YYYY-MM-DD") : "-"}</td>
-                          <td>
-                            <strong>{rec.company_name || rec.company_no || "-"}</strong>
-                            {rec.level === "0" && <span style={{ marginLeft: 6, fontSize: 11, color: "#3b82f6" }}>[一级]</span>}
-                          </td>
-                          <td>{rec.type_name || `类型${rec.type_no}` || "-"}</td>
-                          <td style={{ textAlign: "right", fontFamily: "monospace" }}>{formatAmount(rec.current_amount)}</td>
-                          <td style={{ textAlign: "right", fontFamily: "monospace" }}>{formatAmount(rec.last_year_amount)}</td>
-                          <td style={{ textAlign: "right", fontFamily: "monospace", color: (rec.add_rate ?? 0) >= 0 ? "#22c55e" : "#ef4444" }}>
-                            {formatPercent(rec.add_rate)}
-                          </td>
-                          <td style={{ color: "#64748b", fontSize: 12 }}>
-                            {subs.length > 0 ? `${subs.length} 家` : "-"}
-                          </td>
-                        </tr>
-
-                        {/* 子公司嵌套表格 */}
-                        {isExpanded && subs.length > 0 && (
-                          <tr>
-                            <td colSpan={8} style={{ padding: 0, background: "#f1f5f9" }}>
-                              <div style={{ padding: "12px 16px 12px 50px" }}>
-                                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: "#475569" }}>
-                                  子公司明细
-                                </div>
-                                <table className="list-table" style={{ background: "#fff", margin: 0 }}>
-                                  <thead>
-                                    <tr>
-                                      <th>公司名称</th>
-                                      <th>科目类型</th>
-                                      <th style={{ textAlign: "right" }}>本期金额</th>
-                                      <th style={{ textAlign: "right" }}>去年同期</th>
-                                      <th style={{ textAlign: "right" }}>月同比</th>
-                                      <th style={{ textAlign: "right" }}>本年累计</th>
-                                      <th style={{ textAlign: "right" }}>年同比</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {subs.map((sub, idx) => (
-                                      <tr key={sub.id || idx}>
-                                        <td>
-                                          {sub.companyName || sub.companyNo}
-                                          {sub.level === "1" && <span style={{ marginLeft: 6, fontSize: 11, color: "#64748b" }}>[二级]</span>}
-                                        </td>
-                                        <td>{sub.typeName || `类型${sub.typeNo}` || "-"}</td>
-                                        <td style={{ textAlign: "right", fontFamily: "monospace" }}>{formatAmount(sub.currentAmt)}</td>
-                                        <td style={{ textAlign: "right", fontFamily: "monospace" }}>{formatAmount(sub.lastYearAmt)}</td>
-                                        <td style={{ textAlign: "right", fontFamily: "monospace", color: (sub.addRate ?? 0) >= 0 ? "#22c55e" : "#ef4444" }}>
-                                          {formatPercent(sub.addRate)}
-                                        </td>
-                                        <td style={{ textAlign: "right", fontFamily: "monospace" }}>{formatAmount(sub.thisYearTotalAmt)}</td>
-                                        <td style={{ textAlign: "right", fontFamily: "monospace", color: (sub.yearAddRate ?? 0) >= 0 ? "#22c55e" : "#ef4444" }}>
-                                          {formatPercent(sub.yearAddRate)}
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
-                            </td>
-                          </tr>
+                  {groupedData.map((company) => (
+                    <tr
+                      key={company.company_no}
+                      style={{
+                        background: company.level === "0" ? "#f0f9ff" : undefined,
+                        fontWeight: company.level === "0" ? 600 : 400,
+                      }}
+                    >
+                      <td
+                        style={{
+                          position: "sticky",
+                          left: 0,
+                          background: company.level === "0" ? "#f0f9ff" : "#fff",
+                          zIndex: 1,
+                        }}
+                      >
+                        {company.company_name}
+                        {company.level === "0" && (
+                          <span
+                            style={{
+                              marginLeft: 6,
+                              fontSize: 11,
+                              color: "#3b82f6",
+                              background: "#dbeafe",
+                              padding: "1px 6px",
+                              borderRadius: 4,
+                            }}
+                          >
+                            集团
+                          </span>
                         )}
-                      </Fragment>
-                    );
-                  })}
+                      </td>
+                      {activeTypes.map((t) => {
+                        const metric = company.metrics[t.type_no];
+                        return (
+                          <Fragment key={`${company.company_no}-${t.type_no}`}>
+                            <td style={{ textAlign: "right", fontFamily: "monospace" }}>
+                              {formatAmount(metric?.current_amount)}
+                            </td>
+                            <td
+                              style={{
+                                textAlign: "right",
+                                fontFamily: "monospace",
+                                color: getPercentColor(metric?.add_rate),
+                              }}
+                            >
+                              {formatPercent(metric?.add_rate)}
+                            </td>
+                          </Fragment>
+                        );
+                      })}
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
           )}
+
+          {/* 指标说明 */}
+          <div
+            style={{
+              marginTop: 16,
+              padding: 12,
+              background: "#f8fafc",
+              borderRadius: 8,
+              fontSize: 12,
+              color: "#64748b",
+            }}
+          >
+            <strong>指标说明：</strong>
+            {activeTypes.map((t, i) => (
+              <span key={t.type_no}>
+                {t.type_no}={t.type_name}
+                {i < activeTypes.length - 1 ? "、" : ""}
+              </span>
+            ))}
+            <span style={{ marginLeft: 16 }}>金额单位：万元</span>
+          </div>
         </div>
       ) : (
         <div className="panel" style={{ marginTop: 0, borderTopLeftRadius: 0 }}>
@@ -391,8 +440,18 @@ export default function FinanceDataPage() {
                           padding: "2px 8px",
                           borderRadius: 4,
                           fontSize: 12,
-                          background: log.status === "success" ? "#dcfce7" : log.status === "failed" ? "#fee2e2" : "#fef3c7",
-                          color: log.status === "success" ? "#166534" : log.status === "failed" ? "#991b1b" : "#92400e",
+                          background:
+                            log.status === "success"
+                              ? "#dcfce7"
+                              : log.status === "failed"
+                              ? "#fee2e2"
+                              : "#fef3c7",
+                          color:
+                            log.status === "success"
+                              ? "#166534"
+                              : log.status === "failed"
+                              ? "#991b1b"
+                              : "#92400e",
                         }}
                       >
                         {log.status || "-"}
@@ -401,7 +460,14 @@ export default function FinanceDataPage() {
                     <td style={{ textAlign: "right" }}>{log.fetched_count ?? 0}</td>
                     <td style={{ textAlign: "right" }}>{log.inserted_count ?? 0}</td>
                     <td style={{ textAlign: "right" }}>{log.updated_count ?? 0}</td>
-                    <td style={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <td
+                      style={{
+                        maxWidth: 200,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
                       {log.error_message || "-"}
                     </td>
                   </tr>
