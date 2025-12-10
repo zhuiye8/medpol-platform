@@ -294,8 +294,17 @@ def task_embeddings_index(
     all_articles: bool = False,
     days: Optional[int] = None,
     limit: Optional[int] = None,
+    force: bool = False,
 ) -> dict:
-    """Trigger embeddings indexing for articles."""
+    """Trigger embeddings indexing for articles.
+
+    Args:
+        article_ids: Specific article IDs to index.
+        all_articles: If True, index all articles.
+        days: Only index articles from last N days.
+        limit: Max number of articles to index.
+        force: If True, re-index existing articles. If False, skip already indexed.
+    """
 
     try:
         session_factory = get_session_factory()
@@ -305,8 +314,8 @@ def task_embeddings_index(
             else:
                 articles = _select_articles_for_index(session, article_ids=article_ids, days=days, limit=limit)
         docs = chunk_articles(articles)
-        added = add_documents(docs)
-        return {"status": "ok", "articles": len(articles), "chunks_indexed": added}
+        added = add_documents(docs, force=force)
+        return {"status": "ok", "articles": len(articles), "chunks_indexed": added, "force": force}
     except Exception as exc:  # pragma: no cover - unexpected
         return {"status": "error", "error": str(exc)}
 

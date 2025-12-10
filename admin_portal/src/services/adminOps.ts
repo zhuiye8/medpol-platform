@@ -93,15 +93,20 @@ export async function fetchEmbeddingArticleDetail(articleId: string): Promise<Em
   return unwrap(resp);
 }
 
-export async function triggerEmbeddingIndex(payload: { article_ids?: string[]; all?: boolean }): Promise<{
-  task_id: string;
-}> {
+export async function triggerEmbeddingIndex(payload: {
+  article_ids?: string[];
+  all?: boolean;
+  force?: boolean;
+}): Promise<{ task_id: string }> {
   const body: Record<string, unknown> = {};
   if (payload.article_ids?.length) {
     body.article_ids = payload.article_ids;
   }
   if (payload.all !== undefined) {
     body.all = payload.all;
+  }
+  if (payload.force !== undefined) {
+    body.force = payload.force;
   }
   const resp = await apiRequest<AdminResp<{ task_id: string }>>("/v1/admin/embeddings/index", {
     method: "POST",

@@ -31,13 +31,47 @@ def _connect():
     return conn
 
 
-def add_documents(docs: List[Dict]) -> int:
-    """Insert documents into article_embeddings."""
+def add_documents(docs: List[Dict], force: bool = False) -> int:
+    """Insert documents into article_embeddings.
+
+    Args:
+        docs: List of documents with text and metadata.
+        force: If True, delete existing embeddings for articles before inserting.
+               If False, skip articles that already have embeddings.
+
+    Returns:
+        Number of chunks inserted.
+    """
 
     if not docs:
         return 0
+
+    # 收集所有 article_id
+    article_ids = list({
+        item.get("metadata", {}).get("article_id")
+        for item in docs
+        if item.get("metadata", {}).get("article_id")
+    })
+
+    if not article_ids:
+        return 0
+
     inserted = 0
     with _connect() as conn, conn.cursor() as cur:
+        if force:
+            # 强制模式：先删除这些文章的旧切片
+            cur.execute(
+                "DELETE FROM article_embeddings WHERE article_id = ANY(%s)",
+                (article_ids,),
+            )
+        else:
+            # 跳过模式：查询已存在的 article_id
+            cur.execute(
+                "SELECT DISTINCT article_id FROM article_embeddings WHERE article_id = ANY(%s)",
+                (article_ids,),
+            )
+            existing_ids = {row[0] for row in cur.fetchall()}
+
         for item in docs:
             text = item.get("text", "")
             meta = item.get("metadata", {}) or {}
@@ -45,12 +79,21 @@ def add_documents(docs: List[Dict]) -> int:
             chunk_index = meta.get("chunk_index", 0)
             if not text or not article_id:
                 continue
+
+            # 跳过模式：如果文章已存在则跳过
+            if not force and article_id in existing_ids:
+                continue
+
             embedding = get_embedding(text)
             cur.execute(
                 """
                 INSERT INTO article_embeddings (id, article_id, chunk_index, chunk_text, embedding, model_name)
                 VALUES (%s, %s, %s, %s, %s, %s)
-                ON CONFLICT (id) DO NOTHING
+                ON CONFLICT (article_id, chunk_index) DO UPDATE SET
+                    chunk_text = EXCLUDED.chunk_text,
+                    embedding = EXCLUDED.embedding,
+                    model_name = EXCLUDED.model_name,
+                    updated_at = NOW()
                 """,
                 (
                     str(uuid.uuid4()),

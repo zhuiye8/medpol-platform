@@ -22,6 +22,7 @@ class EmbeddingIndexRequest(BaseModel):
     """Request body for triggering embedding indexing."""
     article_ids: Optional[List[str]] = None
     all: bool = False
+    force: bool = False  # True: 覆盖已存在的, False: 跳过已存在的
 
 
 load_env()
@@ -116,10 +117,14 @@ def embeddings_index(req: EmbeddingIndexRequest):
 
     task = celery_app.send_task(
         "formatter.embeddings_index",
-        kwargs={"article_ids": req.article_ids, "all_articles": req.all},
+        kwargs={
+            "article_ids": req.article_ids,
+            "all_articles": req.all,
+            "force": req.force,
+        },
         queue=FORMATTER_QUEUE,
     )
-    return {"code": 0, "message": "index triggered", "data": {"task_id": task.id}}
+    return {"code": 0, "message": "index triggered", "data": {"task_id": task.id, "force": req.force}}
 
 
 @router.get("/tasks/{task_id}")

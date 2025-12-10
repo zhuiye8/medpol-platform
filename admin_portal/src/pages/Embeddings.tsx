@@ -26,6 +26,7 @@ export default function EmbeddingsPage() {
   const [taskId, setTaskId] = useState<string | null>(null);
   const [taskState, setTaskState] = useState<string | null>(null);
   const [indexing, setIndexing] = useState(false);
+  const [forceReindex, setForceReindex] = useState(false);
 
   const totalPages = Math.ceil(total / PAGE_SIZE) || 1;
 
@@ -119,7 +120,9 @@ export default function EmbeddingsPage() {
     setError(null);
     try {
       const payload =
-        selected.size > 0 ? { article_ids: Array.from(selected), all: false } : { all: true };
+        selected.size > 0
+          ? { article_ids: Array.from(selected), all: false, force: forceReindex }
+          : { all: true, force: forceReindex };
       const res = await triggerEmbeddingIndex(payload);
       setTaskId(res.task_id);
     } catch (err) {
@@ -167,7 +170,17 @@ export default function EmbeddingsPage() {
             <div className="panel__value">{taskState || "未触发"}</div>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 14 }}>
+            <input
+              type="checkbox"
+              checked={forceReindex}
+              onChange={(e) => setForceReindex(e.target.checked)}
+            />
+            <span style={{ color: forceReindex ? "#dc2626" : "#64748b" }}>
+              强制覆盖
+            </span>
+          </label>
           <button onClick={handleIndex} disabled={indexing}>
             {indexing ? "向量化中..." : selected.size ? `向量化选中(${selected.size})` : "全量向量化"}
           </button>

@@ -57,7 +57,7 @@ def chunk_articles(docs: List) -> List[dict]:
     return chunks
 
 
-def main(days: int | None = None, limit: int | None = None):
+def main(days: int | None = None, limit: int | None = None, force: bool = False):
     load_env()
     settings = get_settings()
     session_factory = get_session_factory()
@@ -68,7 +68,9 @@ def main(days: int | None = None, limit: int | None = None):
             cutoff = datetime.utcnow() - timedelta(days=days)
             articles = [a for a in articles if a.publish_time >= cutoff]
     docs = chunk_articles(articles)
-    added = add_documents(docs)
+    mode = "force (overwrite)" if force else "skip existing"
+    print(f"Indexing {len(articles)} articles ({mode})...")
+    added = add_documents(docs, force=force)
     print(f"Indexed {added} chunks to collection {settings.pgvector_collection_name}")
 
 
@@ -76,5 +78,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Index articles into pgvector for RAG.")
     parser.add_argument("--days", type=int, default=None, help="Only index articles in last N days")
     parser.add_argument("--limit", type=int, default=None, help="Max articles to load")
+    parser.add_argument("--force", action="store_true", help="Force re-index existing articles (overwrite)")
     args = parser.parse_args()
-    main(days=args.days, limit=args.limit)
+    main(days=args.days, limit=args.limit, force=args.force)
