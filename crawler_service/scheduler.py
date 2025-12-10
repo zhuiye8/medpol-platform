@@ -27,7 +27,7 @@ DEFAULT_CONFIGS = [
         source_id="src_pharnex_frontier",
         source_name="药渡前沿",
         crawler_name="pharnex_frontier",
-        meta={"category_slug": "shiye", "abbreviation": "qy", "max_pages": 1, "page_size": 5},
+        meta={"category_slug": "shiye", "abbreviation": "qy", "max_pages": 3, "page_size": 10},
     ),
     # 医保局
     CrawlerRuntimeConfig(

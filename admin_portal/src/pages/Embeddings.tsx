@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import dayjs from "dayjs";
 import {
   fetchEmbeddingArticleDetail,
@@ -10,10 +10,13 @@ import {
 import type { EmbeddingArticle, EmbeddingChunk, EmbeddingStats } from "@/types/admin";
 
 const TERMINAL_STATES = ["SUCCESS", "FAILURE", "REVOKED"];
+const PAGE_SIZE = 50;
 
 export default function EmbeddingsPage() {
   const [stats, setStats] = useState<EmbeddingStats | null>(null);
   const [articles, setArticles] = useState<EmbeddingArticle[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [chunksMap, setChunksMap] = useState<Record<string, EmbeddingChunk[]>>({});
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -24,6 +27,8 @@ export default function EmbeddingsPage() {
   const [taskState, setTaskState] = useState<string | null>(null);
   const [indexing, setIndexing] = useState(false);
 
+  const totalPages = Math.ceil(total / PAGE_SIZE) || 1;
+
   const embeddedRate = useMemo(() => {
     if (!stats) return "-";
     if (!stats.total_articles) return "0%";
@@ -31,23 +36,34 @@ export default function EmbeddingsPage() {
     return `${pct}%`;
   }, [stats]);
 
-  async function loadData() {
+  const loadData = useCallback(async (currentPage = 1) => {
     setLoading(true);
     setError(null);
     try {
-      const [s, arts] = await Promise.all([fetchEmbeddingStats(), fetchEmbeddingArticles(50)]);
+      const offset = (currentPage - 1) * PAGE_SIZE;
+      const [s, artsResp] = await Promise.all([
+        fetchEmbeddingStats(),
+        fetchEmbeddingArticles(PAGE_SIZE, offset),
+      ]);
       setStats(s);
-      setArticles(arts);
+      setArticles(artsResp.items);
+      setTotal(artsResp.total);
     } catch (err) {
       setError((err as Error).message || "加载失败");
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    loadData(page);
+  }, [page, loadData]);
+
+  function handlePageChange(newPage: number) {
+    if (newPage < 1 || newPage > totalPages) return;
+    setPage(newPage);
+    setExpanded(null);
+  }
 
   useEffect(() => {
     if (!taskId) return;
@@ -60,7 +76,7 @@ export default function EmbeddingsPage() {
         if (TERMINAL_STATES.includes(res.state)) {
           clearInterval(timer);
           setIndexing(false);
-          loadData();
+          loadData(page);
         }
       } catch (err) {
         setTaskState("FAILED");
@@ -70,7 +86,7 @@ export default function EmbeddingsPage() {
       }
     }, 2000);
     return () => clearInterval(timer);
-  }, [taskId]);
+  }, [taskId, page, loadData]);
 
   function toggleSelect(id: string) {
     setSelected((prev) => {
@@ -155,7 +171,7 @@ export default function EmbeddingsPage() {
           <button onClick={handleIndex} disabled={indexing}>
             {indexing ? "向量化中..." : selected.size ? `向量化选中(${selected.size})` : "全量向量化"}
           </button>
-          <button className="ghost" onClick={loadData} disabled={loading}>
+          <button className="ghost" onClick={() => loadData(page)} disabled={loading}>
             刷新
           </button>
         </div>
@@ -164,7 +180,30 @@ export default function EmbeddingsPage() {
       {error ? <div className="error-banner">错误：{error}</div> : null}
 
       <div className="panel" style={{ marginTop: 12 }}>
-        <div className="panel__title">文章列表（最新 50 条）</div>
+        <div className="panel__title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>文章列表（共 {total} 条）</span>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 14 }}>
+            <button
+              className="ghost"
+              onClick={() => handlePageChange(page - 1)}
+              disabled={page <= 1 || loading}
+              style={{ padding: "4px 8px" }}
+            >
+              上一页
+            </button>
+            <span style={{ color: "#64748b" }}>
+              {page} / {totalPages}
+            </span>
+            <button
+              className="ghost"
+              onClick={() => handlePageChange(page + 1)}
+              disabled={page >= totalPages || loading}
+              style={{ padding: "4px 8px" }}
+            >
+              下一页
+            </button>
+          </div>
+        </div>
         {!articles.length ? (
           <div className="empty-state">暂无文章</div>
         ) : (

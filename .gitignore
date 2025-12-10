@@ -16,3 +16,4 @@ playwright/.cache/
 .env
 .claude/
 vanna_outputs/
+nmpa-profile/

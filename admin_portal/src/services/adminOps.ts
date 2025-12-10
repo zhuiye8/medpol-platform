@@ -70,10 +70,21 @@ export async function fetchEmbeddingStats(): Promise<EmbeddingStats> {
   return unwrap(resp);
 }
 
-export async function fetchEmbeddingArticles(limit = 50): Promise<EmbeddingArticle[]> {
-  const resp = await apiRequest<AdminResp<EmbeddingArticle[]>>("/v1/admin/embeddings/articles", {
-    query: { limit },
-  });
+export interface EmbeddingArticlesResponse {
+  items: EmbeddingArticle[];
+  total: number;
+}
+
+export async function fetchEmbeddingArticles(
+  limit = 50,
+  offset = 0
+): Promise<EmbeddingArticlesResponse> {
+  const resp = await apiRequest<AdminResp<EmbeddingArticlesResponse>>(
+    "/v1/admin/embeddings/articles",
+    {
+      query: { limit, offset },
+    }
+  );
   return unwrap(resp);
 }
 

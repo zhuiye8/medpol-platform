@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, List
 
 from fastapi import APIRouter, Query
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from celery.result import AsyncResult
 
@@ -15,6 +16,14 @@ from common.persistence.models import ArticleEmbeddingORM, ArticleORM
 from common.utils.env import load_env
 
 router = APIRouter()
+
+
+class EmbeddingIndexRequest(BaseModel):
+    """Request body for triggering embedding indexing."""
+    article_ids: Optional[List[str]] = None
+    all: bool = False
+
+
 load_env()
 
 
@@ -43,12 +52,19 @@ def embeddings_stats():
 
 
 @router.get("/embeddings/articles")
-def embeddings_articles(limit: int = Query(50, ge=1, le=500)):
+def embeddings_articles(
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+):
     factory = _get_session()
     with session_scope(factory) as session:
+        # 获取总数
+        total = session.scalar(select(func.count()).select_from(ArticleORM)) or 0
+        # 分页查询
         rows = (
             session.query(ArticleORM)
             .order_by(ArticleORM.publish_time.desc())
+            .offset(offset)
             .limit(limit)
             .all()
         )
@@ -70,7 +86,7 @@ def embeddings_articles(limit: int = Query(50, ge=1, le=500)):
                 "embedded": art.id in embedded_ids,
             }
         )
-    return {"code": 0, "message": "ok", "data": data}
+    return {"code": 0, "message": "ok", "data": {"items": data, "total": total}}
 
 
 @router.get("/embeddings/articles/{article_id}")
@@ -95,12 +111,12 @@ def embeddings_article_detail(article_id: str):
 
 
 @router.post("/embeddings/index")
-def embeddings_index(article_ids: Optional[list[str]] = None, all: bool = False):
+def embeddings_index(req: EmbeddingIndexRequest):
     """Trigger embedding indexing via Celery."""
 
     task = celery_app.send_task(
         "formatter.embeddings_index",
-        kwargs={"article_ids": article_ids, "all_articles": all},
+        kwargs={"article_ids": req.article_ids, "all_articles": req.all},
         queue=FORMATTER_QUEUE,
     )
     return {"code": 0, "message": "index triggered", "data": {"task_id": task.id}}
