@@ -75,6 +75,15 @@ def embeddings_articles(
             .distinct()
             .all()
         }
+        # 获取每篇文章的切片数量
+        chunk_counts = dict(
+            session.query(
+                ArticleEmbeddingORM.article_id,
+                func.count(ArticleEmbeddingORM.id)
+            )
+            .group_by(ArticleEmbeddingORM.article_id)
+            .all()
+        )
     data = []
     for art in rows:
         data.append(
@@ -85,6 +94,7 @@ def embeddings_articles(
                 "publish_time": art.publish_time,
                 "source_name": art.source_name,
                 "embedded": art.id in embedded_ids,
+                "chunk_count": chunk_counts.get(art.id, 0),
             }
         )
     return {"code": 0, "message": "ok", "data": {"items": data, "total": total}}

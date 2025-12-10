@@ -70,6 +70,7 @@ export interface EmbeddingArticle {
   publish_time: string | null;
   source_name: string | null;
   embedded: boolean;
+  chunk_count: number;
 }
 
 export interface EmbeddingChunk {

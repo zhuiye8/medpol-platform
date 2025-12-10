@@ -12,12 +12,78 @@ import type { EmbeddingArticle, EmbeddingChunk, EmbeddingStats } from "@/types/a
 const TERMINAL_STATES = ["SUCCESS", "FAILURE", "REVOKED"];
 const PAGE_SIZE = 50;
 
+/* ---------- 切片详情弹窗 ---------- */
+function ChunkModal({
+  article,
+  chunks,
+  onClose,
+}: {
+  article: EmbeddingArticle;
+  chunks: EmbeddingChunk[];
+  onClose: () => void;
+}) {
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal" style={{ maxWidth: 800 }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal__header">
+          <h2 style={{ margin: 0, fontSize: 18 }}>切片详情</h2>
+          <button
+            onClick={onClose}
+            style={{
+              background: "none",
+              border: "none",
+              fontSize: 24,
+              cursor: "pointer",
+              color: "#64748b",
+              padding: "0 4px",
+            }}
+          >
+            ×
+          </button>
+        </div>
+        <div style={{ marginBottom: 16, padding: 12, background: "#f8fafc", borderRadius: 8 }}>
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>{article.title}</div>
+          <div style={{ fontSize: 13, color: "#64748b" }}>
+            {article.source_name} · {article.publish_time ? dayjs(article.publish_time).format("YYYY-MM-DD") : "-"}
+          </div>
+        </div>
+        <div style={{ flex: 1, overflowY: "auto" }}>
+          {!chunks.length ? (
+            <div className="empty-state">暂无切片数据</div>
+          ) : (
+            <table className="list-table sub">
+              <thead>
+                <tr>
+                  <th style={{ width: 50 }}>#</th>
+                  <th style={{ width: 120 }}>模型</th>
+                  <th>内容</th>
+                </tr>
+              </thead>
+              <tbody>
+                {chunks.map((c) => (
+                  <tr key={c.chunk_index}>
+                    <td>{c.chunk_index}</td>
+                    <td>{c.model_name || "-"}</td>
+                    <td style={{ maxWidth: 500, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                      {c.chunk_text}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function EmbeddingsPage() {
   const [stats, setStats] = useState<EmbeddingStats | null>(null);
   const [articles, setArticles] = useState<EmbeddingArticle[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [viewingArticle, setViewingArticle] = useState<EmbeddingArticle | null>(null);
   const [chunksMap, setChunksMap] = useState<Record<string, EmbeddingChunk[]>>({});
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
@@ -63,7 +129,6 @@ export default function EmbeddingsPage() {
   function handlePageChange(newPage: number) {
     if (newPage < 1 || newPage > totalPages) return;
     setPage(newPage);
-    setExpanded(null);
   }
 
   useEffect(() => {
@@ -101,16 +166,12 @@ export default function EmbeddingsPage() {
     });
   }
 
-  async function toggleExpand(articleId: string) {
-    if (expanded === articleId) {
-      setExpanded(null);
-      return;
-    }
-    setExpanded(articleId);
-    if (chunksMap[articleId]) return;
+  async function openChunkModal(article: EmbeddingArticle) {
+    setViewingArticle(article);
+    if (chunksMap[article.id]) return;
     try {
-      const chunks = await fetchEmbeddingArticleDetail(articleId);
-      setChunksMap((prev) => ({ ...prev, [articleId]: chunks }));
+      const chunks = await fetchEmbeddingArticleDetail(article.id);
+      setChunksMap((prev) => ({ ...prev, [article.id]: chunks }));
     } catch (err) {
       setError((err as Error).message || "获取切片失败");
     }
@@ -254,8 +315,8 @@ export default function EmbeddingsPage() {
                   <td>{art.source_name || "-"}</td>
                   <td>{art.embedded ? "是" : "否"}</td>
                   <td>
-                    <button className="ghost" onClick={() => toggleExpand(art.id)}>
-                      {expanded === art.id ? "收起切片" : "查看切片"}
+                    <button className="ghost" onClick={() => openChunkModal(art)}>
+                      查看切片 ({art.chunk_count})
                     </button>
                   </td>
                 </tr>
@@ -263,34 +324,16 @@ export default function EmbeddingsPage() {
             </tbody>
           </table>
         )}
-        {expanded ? (
-          <div className="panel" style={{ marginTop: 12, background: "#f8fafc" }}>
-            <div className="panel__title">切片详情</div>
-            {!chunksMap[expanded]?.length ? (
-              <div className="empty-state">暂无切片数据</div>
-            ) : (
-              <table className="list-table sub">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>模型</th>
-                    <th>内容</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {chunksMap[expanded].map((c) => (
-                    <tr key={c.chunk_index}>
-                      <td>{c.chunk_index}</td>
-                      <td>{c.model_name || "-"}</td>
-                      <td style={{ maxWidth: 720, whiteSpace: "pre-wrap" }}>{c.chunk_text}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        ) : null}
       </div>
+
+      {/* 切片详情弹窗 */}
+      {viewingArticle && (
+        <ChunkModal
+          article={viewingArticle}
+          chunks={chunksMap[viewingArticle.id] || []}
+          onClose={() => setViewingArticle(null)}
+        />
+      )}
     </div>
   );
 }
