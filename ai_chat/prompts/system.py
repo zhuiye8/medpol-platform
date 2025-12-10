@@ -19,19 +19,19 @@ TYPE_NO_MAPPING = {
     "08": "入库税金(扬州地区)",
 }
 
-# 公司编号映射
+# 公司编号映射（company_no -> company_name，与 API 返回一致）
 COMPANY_MAPPING = {
-    "lhjt": "联环集团",
+    "lhjt": "集团(合)",
     "gykg": "国药控股",
     "htb": "华天宝",
     "ltyyhb": "联通医药",
-    "plshb": "普林斯",
+    "plshb": "普林斯(合)",
     "yhtzy": "颐和堂",
-    "lhjthb": "股份公司",
-    "lbyyhb": "联博",
-    "jkcyhb": "健康产业",
+    "lhjthb": "股份(合)",
+    "lbyyhb": "联博(合)",
+    "jkcyhb": "产业(合)",
     "sshx": "圣氏化学",
-    "ydjyhb": "基因公司",
+    "ydjyhb": "基因(合)",
     "khyy": "康和药业",
     "scly": "四川龙一",
 }
@@ -57,8 +57,8 @@ def build_system_prompt(persona: str | None = None, mode: str = "rag") -> str:
     # 指标类型映射字符串
     type_mapping_str = ", ".join([f"{k}={v}" for k, v in TYPE_NO_MAPPING.items()])
 
-    # 公司映射字符串（主要公司）
-    company_mapping_str = "联环集团=lhjt, 国药控股=gykg, 联通医药=ltyyhb, 颐和堂=yhtzy"
+    # 公司映射字符串（所有公司）
+    company_mapping_str = ", ".join([f"{v}={k}" for k, v in COMPANY_MAPPING.items()])
 
     # 财务查询的核心业务知识（SQL 和 Hybrid 共用）
     sql_knowledge = (
@@ -85,14 +85,32 @@ def build_system_prompt(persona: str | None = None, mode: str = "rag") -> str:
         '3. 数据来源表述为"联环集团财务数据"而非"finance_records"或"数据表"\n'
         '4. 同比增长使用百分比格式，如"+23.72%"或"-5.3%"\n'
         '5. 日期显示为"2025年9月"而非"2025-09-01"\n'
+        "6. 禁止暴露技术细节：\n"
+        "   - 禁止输出SQL语句、表名、字段名\n"
+        "   - 禁止显示JSON结构、文件路径、CSV文件名\n"
+        '   - 禁止说"根据查询结果"、"Results saved to file"等内部提示\n'
+        "   - 直接用自然语言陈述数据，如：联环集团2024年9月营业收入为xxx万元\n"
+    )
+
+    # 图表生成引导
+    chart_guidance = (
+        "【图表生成】\n"
+        "查询财务数据后，主动调用 generate_finance_chart 生成可视化图表：\n"
+        "- 多公司数据对比：使用 bar（柱状图）\n"
+        "- 月度趋势分析：使用 line（折线图）\n"
+        "- 占比/分布分析：使用 pie（饼图）\n"
+        "注意：\n"
+        "1. 必须先调用 query_finance_sql 获取数据，再调用 generate_finance_chart\n"
+        "2. 默认只生成一个图表，不要同时生成多种图表类型，除非用户明确要求\n"
+        "3. 选择最适合数据特点的图表类型即可\n"
     )
 
     mode_hint = {
         "rag": "仅可调用 search_policy_articles 进行向量检索；回答时引用片段信息并用中文总结，不泄露字段/向量细节。",
-        "sql": f"仅可调用 query_finance_sql 执行只读 SQL。\n{sql_knowledge}\n{output_rules}",
+        "sql": f"可调用 query_finance_sql 执行只读 SQL，以及 generate_finance_chart 生成图表。\n{sql_knowledge}\n{output_rules}\n{chart_guidance}",
         "hybrid": (
-            f"优先调用 query_finance_sql 获取财务数据，再结合 search_policy_articles 检索政策信息。\n"
-            f"{sql_knowledge}\n{output_rules}"
+            f"可调用 query_finance_sql 获取财务数据，search_policy_articles 检索政策信息，generate_finance_chart 生成图表。\n"
+            f"{sql_knowledge}\n{output_rules}\n{chart_guidance}"
         ),
     }.get(mode, "")
 
@@ -105,4 +123,19 @@ def build_system_prompt(persona: str | None = None, mode: str = "rag") -> str:
     )
 
 
-__all__ = ["build_system_prompt"]
+# 字段显示名映射（用于图表、前端展示）
+FIELD_DISPLAY_MAPPING = {
+    "current_amount": "当期金额",
+    "last_year_amount": "去年同期",
+    "this_year_total_amount": "本年累计",
+    "add_rate": "同比增长率(%)",
+    "year_add_rate": "年同比(%)",
+    "keep_date": "月份",
+    "company_name": "公司",
+    "company_no": "公司编号",
+    "type_name": "指标类型",
+    "type_no": "指标编号",
+}
+
+
+__all__ = ["build_system_prompt", "TYPE_NO_MAPPING", "COMPANY_MAPPING", "FIELD_DISPLAY_MAPPING"]

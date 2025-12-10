@@ -13,8 +13,13 @@ from ai_chat.vanna.system_prompt_builder import ModePromptBuilder
 from ai_chat.vanna.registry import LoggingToolRegistry
 
 
-def build_agent(mode: str):
-    """Create a Vanna Agent configured for a given mode (rag|sql|hybrid)."""
+def build_agent(mode: str, stream: bool = False):
+    """Create a Vanna Agent configured for a given mode (rag|sql|hybrid).
+
+    Args:
+        mode: Agent mode - "rag", "sql", or "hybrid"
+        stream: Whether to enable streaming responses
+    """
 
     registry = LoggingToolRegistry()
     register_tools(registry, mode)
@@ -25,7 +30,7 @@ def build_agent(mode: str):
         user_resolver=SimpleUserResolver(),
         agent_memory=build_agent_memory(),
         conversation_store=MemoryConversationStore(),
-        config=AgentConfig(stream_responses=False, temperature=0.2, max_tool_iterations=8),
+        config=AgentConfig(stream_responses=stream, temperature=0.2, max_tool_iterations=8),
         system_prompt_builder=ModePromptBuilder(mode=mode),
     )
     return agent

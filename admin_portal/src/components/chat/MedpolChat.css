@@ -1,0 +1,1412 @@
+/**
+ * MedpolChat Styles
+ * Mobile-first, card-based layout
+ */
+
+/* ======================== Font Size Variables ======================== */
+.medpol-chat {
+  --chat-font-size: 14px;
+  --chat-font-size-sm: 12px;
+  --chat-font-size-lg: 13px;
+}
+
+.medpol-chat--font-small {
+  --chat-font-size: 13px;
+  --chat-font-size-sm: 11px;
+  --chat-font-size-lg: 12px;
+}
+
+.medpol-chat--font-large {
+  --chat-font-size: 16px;
+  --chat-font-size-sm: 14px;
+  --chat-font-size-lg: 15px;
+}
+
+.medpol-chat--font-xlarge {
+  --chat-font-size: 18px;
+  --chat-font-size-sm: 16px;
+  --chat-font-size-lg: 17px;
+}
+
+/* ======================== Container ======================== */
+.medpol-chat {
+  display: flex;
+  flex-direction: column;
+  background: #f8fafc;
+  border-radius: 12px;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* ======================== Toolbar ======================== */
+.medpol-chat__toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 12px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.medpol-chat__font-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #475569;
+  transition: all 0.2s ease;
+}
+
+.medpol-chat__font-toggle:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+}
+
+.medpol-chat__font-toggle:active {
+  transform: scale(0.96);
+}
+
+.medpol-chat__font-toggle-icon {
+  font-weight: 700;
+  font-size: 14px;
+  color: #2563eb;
+}
+
+.medpol-chat__font-toggle-label {
+  font-weight: 500;
+}
+
+.medpol-chat--mobile {
+  max-width: 520px;
+  margin: 0 auto;
+  border-radius: 18px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+  border: 1px solid #e2e8f0;
+  background: linear-gradient(180deg, #f9fbff 0%, #f8fafc 100%);
+}
+
+/* ======================== Messages Area ======================== */
+.medpol-chat__messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.medpol-chat--mobile .medpol-chat__messages {
+  padding: 14px 12px;
+}
+
+.medpol-chat__welcome {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  animation: welcomeFadeIn 0.5s ease-out;
+}
+
+@keyframes welcomeFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.medpol-chat__message {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 100%;
+  animation: messageSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.medpol-chat__message--user {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+  animation: userMessageSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes userMessageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.medpol-chat__message--assistant {
+  align-self: flex-start;
+}
+
+/* ======================== Avatar ======================== */
+.medpol-chat__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.medpol-chat__avatar:hover {
+  transform: scale(1.08);
+}
+
+.medpol-chat__avatar--user {
+  background: linear-gradient(135deg, #2563eb, #06b6d4);
+  color: white;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.medpol-chat__avatar--assistant {
+  background: linear-gradient(135deg, #10b981, #0ea5e9);
+  color: white;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* ======================== Content ======================== */
+.medpol-chat__content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: calc(100% - 46px);
+  width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* User message content should fit content width */
+.medpol-chat__message--user .medpol-chat__content {
+  align-items: flex-end;
+}
+
+/* ======================== Bubble ======================== */
+.medpol-chat__bubble {
+  padding: 10px 12px;
+  border-radius: 16px;
+  line-height: 1.38;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: var(--chat-font-size, 14px);
+  display: inline-block;
+}
+
+.medpol-chat__bubble--user {
+  background: linear-gradient(135deg, #2563eb, #06b6d4);
+  color: white;
+  border-bottom-right-radius: 4px;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.25);
+  width: fit-content;
+  max-width: 100%;
+}
+
+.medpol-chat__bubble--assistant {
+  background: #ffffff;
+  color: #0f172a;
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 6px 24px rgba(15, 23, 42, 0.07);
+  border: 1px solid #e2e8f0;
+}
+
+.medpol-chat__bubble--streaming {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+/* ======================== Thinking Indicator (Bouncing Dots) ======================== */
+.medpol-chat__thinking {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 0;
+}
+
+.medpol-chat__thinking-dot {
+  width: 8px;
+  height: 8px;
+  background: linear-gradient(135deg, #2563eb, #06b6d4);
+  border-radius: 50%;
+  animation: thinkingBounce 1.4s ease-in-out infinite;
+}
+
+.medpol-chat__thinking-dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.medpol-chat__thinking-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.medpol-chat__thinking-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes thinkingBounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-8px);
+    opacity: 1;
+  }
+}
+
+/* ======================== Streaming Cursor ======================== */
+.medpol-chat__cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1.1em;
+  background: linear-gradient(180deg, #2563eb, #06b6d4);
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: cursorBlink 1s steps(2) infinite;
+  box-shadow: 0 0 8px rgba(37, 99, 235, 0.4);
+}
+
+@keyframes cursorBlink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Remove pulse from streaming bubble, use subtle glow instead */
+.medpol-chat__bubble--streaming {
+  animation: none;
+  box-shadow:
+    0 6px 24px rgba(15, 23, 42, 0.07),
+    0 0 0 1px rgba(37, 99, 235, 0.1);
+}
+
+/* ======================== Components ======================== */
+.medpol-chat__components {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.medpol-chat__component {
+  background: transparent;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* ======================== Tool Status (Compact Inline) ======================== */
+.medpol-chat__tool-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+  animation: statusSlideIn 0.3s ease-out;
+}
+
+@keyframes statusSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.medpol-chat__tool-status-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.medpol-chat__tool-status-text {
+  font-size: var(--chat-font-size, 14px);
+  color: #475569;
+  font-weight: 500;
+}
+
+.medpol-chat__tool-status-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #e2e8f0;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: toolSpin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes toolSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ======================== Error ======================== */
+.medpol-chat__error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #fee2e2;
+  color: #991b1b;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.medpol-chat__error button {
+  padding: 4px 12px;
+  background: white;
+  border: 1px solid #ef4444;
+  color: #ef4444;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+/* ======================== Input Area ======================== */
+.medpol-chat__input-area {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  background: white;
+  border-top: 1px solid #e2e8f0;
+  position: relative;
+}
+
+.medpol-chat--mobile .medpol-chat__input-area {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 -4px 20px rgba(15, 23, 42, 0.08);
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+}
+
+/* ======================== Font Size FAB ======================== */
+.medpol-chat__font-fab {
+  position: absolute;
+  top: -44px;
+  left: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.medpol-chat__font-fab:hover {
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  transform: scale(1.05);
+}
+
+.medpol-chat__font-fab:active {
+  transform: scale(0.95);
+}
+
+.medpol-chat__font-fab-icon {
+  font-size: 13px;
+  font-weight: 700;
+  color: #2563eb;
+}
+
+.medpol-chat__input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  font-size: var(--chat-font-size, 14px);
+  line-height: 1.4;
+  resize: none;
+  outline: none;
+  min-height: 44px;
+  max-height: 96px;
+  font-family: inherit;
+  background: #f5f7fb;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: all 0.25s ease;
+  overflow: hidden;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.medpol-chat__input:focus {
+  border-color: #cbd5e1;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+}
+
+.medpol-chat__input:disabled {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  cursor: not-allowed;
+}
+
+/* Placeholder animation */
+.medpol-chat__input::placeholder {
+  color: #94a3b8;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.medpol-chat__input:focus::placeholder {
+  opacity: 0.6;
+}
+
+.medpol-chat__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ======================== Button Interactions ======================== */
+.medpol-chat__btn {
+  border: none;
+  border-radius: 12px;
+  padding: 10px 18px;
+  font-weight: 600;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.medpol-chat__btn::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.4s ease, height 0.4s ease;
+}
+
+.medpol-chat__btn:active::before {
+  width: 200%;
+  height: 200%;
+}
+
+.medpol-chat__btn--send {
+  background: linear-gradient(135deg, #2563eb, #06b6d4);
+  color: white;
+  box-shadow:
+    0 4px 14px rgba(37, 99, 235, 0.25),
+    0 0 0 0 rgba(37, 99, 235, 0);
+}
+
+.medpol-chat__btn--send:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 20px rgba(37, 99, 235, 0.35),
+    0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
+.medpol-chat__btn--send:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
+.medpol-chat__btn--send:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.medpol-chat__btn--cancel {
+  background: #ffffff;
+  color: #ef4444;
+  border: 1px solid #fecaca;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.1);
+}
+
+.medpol-chat__btn--cancel:hover {
+  background: #fef2f2;
+  border-color: #ef4444;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+
+.medpol-chat__btn--cancel:active {
+  transform: scale(0.98);
+}
+
+/* ======================== Cards (Data / Chart / Search) ======================== */
+.chat-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+  padding: 12px;
+  max-width: 100%;
+  overflow: hidden;
+  transition: all 0.25s ease;
+  animation: componentFadeIn 0.4s ease-out;
+}
+
+.chat-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  transform: translateY(-2px);
+}
+
+@keyframes componentFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.chat-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+
+.chat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: #eef2ff;
+  color: #4338ca;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.chat-card__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0;
+}
+
+.chat-card__meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  color: #475569;
+  font-size: 12px;
+}
+
+.chat-dataframe__wrapper {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.chat-dataframe__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+/* Table Row Animation */
+.chat-dataframe__table tbody tr {
+  animation: tableRowFadeIn 0.3s ease-out backwards;
+  transition: background-color 0.15s ease;
+}
+
+.chat-dataframe__table tbody tr:nth-child(1) { animation-delay: 0.05s; }
+.chat-dataframe__table tbody tr:nth-child(2) { animation-delay: 0.1s; }
+.chat-dataframe__table tbody tr:nth-child(3) { animation-delay: 0.15s; }
+.chat-dataframe__table tbody tr:nth-child(4) { animation-delay: 0.2s; }
+.chat-dataframe__table tbody tr:nth-child(5) { animation-delay: 0.25s; }
+
+.chat-dataframe__table tbody tr:hover {
+  background: #f8fafc;
+}
+
+@keyframes tableRowFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chat-dataframe__table th,
+.chat-dataframe__table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.chat-dataframe__table th {
+  background: #f8fafc;
+  font-weight: 600;
+  color: #475569;
+}
+
+.chat-dataframe__table tr:last-child td {
+  border-bottom: none;
+}
+
+.chat-dataframe__count {
+  margin: 6px 0 0;
+  color: #475569;
+  font-size: 12px;
+}
+
+.chat-chart {
+  width: 100%;
+}
+
+.chat-chart__title {
+  font-size: 14px;
+  margin: 0 0 6px;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.chat-chart__container {
+  width: 100%;
+  height: 280px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  animation: chartReveal 0.5s ease-out;
+}
+
+/* 移动端图表高度稍小 */
+@media (max-width: 480px) {
+  .chat-chart__container {
+    height: 240px;
+  }
+}
+
+@keyframes chartReveal {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.chat-search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.chat-search-results__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  padding: 10px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.06);
+  color: #0f172a;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.chat-search-results__toggle:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.chat-search-results__toggle:active {
+  transform: scale(0.98);
+}
+
+.chat-search-results__toggle-icon {
+  margin-right: 6px;
+  display: inline-block;
+  transition: transform 0.25s ease;
+}
+
+.chat-search-results__toggle[aria-expanded="true"] .chat-search-results__toggle-icon {
+  transform: rotate(180deg);
+}
+
+.chat-search-results__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chat-search-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  overflow: hidden;
+  word-break: break-word;
+  transition: all 0.2s ease;
+  animation: searchItemSlideIn 0.3s ease-out backwards;
+  position: relative;
+}
+
+.chat-search-item:hover {
+  border-color: #2563eb;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+}
+
+@keyframes searchItemSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Stagger animation for search items */
+.chat-search-results__list .chat-search-item:nth-child(1) { animation-delay: 0.05s; }
+.chat-search-results__list .chat-search-item:nth-child(2) { animation-delay: 0.1s; }
+.chat-search-results__list .chat-search-item:nth-child(3) { animation-delay: 0.15s; }
+.chat-search-results__list .chat-search-item:nth-child(4) { animation-delay: 0.2s; }
+.chat-search-results__list .chat-search-item:nth-child(5) { animation-delay: 0.25s; }
+
+/* 相关度徽章 */
+.chat-search-item__badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.chat-search-item__score-bar {
+  height: 3px;
+  background: linear-gradient(90deg, #2563eb, #06b6d4);
+  border-radius: 2px;
+  min-width: 20px;
+  max-width: 60px;
+}
+
+.chat-search-item__score-text {
+  font-size: 10px;
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.chat-search-item__title {
+  display: block;
+  width: 100%;
+  font-size: var(--chat-font-size, 14px);
+  font-weight: 600;
+  color: #0f172a;
+  text-decoration: none;
+  line-height: 1.4;
+  margin-bottom: 4px;
+  /* Button reset for link-like appearance */
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+
+.chat-search-item__title:hover {
+  color: #2563eb;
+}
+
+.chat-search-item__text {
+  margin: 0 0 6px;
+  color: #64748b;
+  line-height: 1.45;
+  font-size: var(--chat-font-size-sm, 12px);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.chat-search-item__meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.chat-empty {
+  padding: 10px;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+/* ======================== Mobile Page Helpers ======================== */
+.mobile-chat-shell {
+  background: transparent;
+}
+
+.mobile-chat-tips {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+}
+
+.mobile-chat-tips__title {
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 6px;
+}
+
+.mobile-chat-tips ul {
+  margin: 0;
+  padding-left: 18px;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.mobile-mode-switcher {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin: 10px 0 12px;
+}
+
+.mobile-mode-switcher__btn {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fff;
+  color: #0f172a;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+  transition: all 0.2s ease;
+}
+
+.mobile-mode-switcher__btn.is-active {
+  border-color: #2563eb;
+  background: linear-gradient(135deg, #2563eb, #06b6d4);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.25);
+}
+
+.eyebrow {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 11px;
+  color: #64748b;
+  margin: 0;
+}
+
+/* ======================== Responsive ======================== */
+@media (max-width: 768px) {
+  .medpol-chat__message {
+    max-width: 95%;
+  }
+
+  .medpol-chat__bubble {
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+
+  .medpol-chat__avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 11px;
+  }
+
+  .medpol-chat__input-area {
+    padding: 10px 12px;
+  }
+
+  .medpol-chat__btn {
+    padding: 8px 16px;
+  }
+
+  .chat-dataframe__table {
+    font-size: 12px;
+  }
+
+  .chat-dataframe__table th,
+  .chat-dataframe__table td {
+    padding: 6px 8px;
+  }
+
+  .chat-chart__container {
+    height: 230px;
+  }
+}
+
+/* ======================== Markdown Styles ======================== */
+.markdown-content {
+  line-height: 1.38;
+  font-size: var(--chat-font-size, 14px);
+}
+
+.markdown-content > *:first-child {
+  margin-top: 0;
+}
+
+.markdown-content > *:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4 {
+  margin: 0.5em 0 0.35em;
+  font-weight: 600;
+  line-height: 1.3;
+  color: #1e293b;
+}
+
+.markdown-content h1 {
+  font-size: 1.4em;
+}
+.markdown-content h2 {
+  font-size: 1.25em;
+}
+.markdown-content h3 {
+  font-size: 1.1em;
+}
+.markdown-content h4 {
+  font-size: 1em;
+}
+
+.markdown-content p {
+  margin: 0.35em 0;
+}
+
+/* 连续段落间距更紧凑 */
+.markdown-content p + p {
+  margin-top: 0.35em;
+}
+
+.markdown-content strong {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.markdown-content em {
+  font-style: italic;
+}
+
+.markdown-content a {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.markdown-content a:hover {
+  text-decoration: underline;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  margin: 0.35em 0;
+  padding-left: 1.2em;
+}
+
+.markdown-content li {
+  margin: 0.2em 0;
+  line-height: 1.38;
+}
+
+.markdown-content li > ul,
+.markdown-content li > ol {
+  margin: 0.2em 0;
+}
+
+.markdown-content blockquote {
+  margin: 0.75em 0;
+  padding: 0.5em 1em;
+  border-left: 3px solid #3b82f6;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.markdown-content blockquote p {
+  margin: 0.25em 0;
+}
+
+.md-inline-code {
+  padding: 0.15em 0.4em;
+  background: #f1f5f9;
+  border-radius: 4px;
+  font-family: ui-monospace, "SF Mono", Monaco, "Cascadia Code", monospace;
+  font-size: 0.9em;
+  color: #dc2626;
+}
+
+.md-pre {
+  margin: 0.75em 0;
+  padding: 12px 16px;
+  background: #1e293b;
+  border-radius: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.md-code-block {
+  font-family: ui-monospace, "SF Mono", Monaco, "Cascadia Code", monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #e2e8f0;
+  white-space: pre;
+}
+
+.md-table-wrapper {
+  margin: 0.75em 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.markdown-content table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.markdown-content th,
+.markdown-content td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.markdown-content th {
+  background: #f8fafc;
+  font-weight: 600;
+  color: #475569;
+}
+
+.markdown-content tr:last-child td {
+  border-bottom: none;
+}
+
+.markdown-content tr:hover td {
+  background: #f8fafc;
+}
+
+.markdown-content hr {
+  margin: 1em 0;
+  border: none;
+  border-top: 1px solid #e2e8f0;
+}
+
+.markdown-content input[type="checkbox"] {
+  margin-right: 0.5em;
+}
+
+.markdown-content del {
+  color: #94a3b8;
+}
+
+/* ======================== Accessibility - Reduced Motion ======================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ======================== Article Modal ======================== */
+
+.article-modal__overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+  animation: modalFadeIn 0.2s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.article-modal__container {
+  background: #fff;
+  border-radius: 12px;
+  max-width: 680px;
+  width: 100%;
+  max-height: 85vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  animation: modalSlideUp 0.25s ease-out;
+}
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.article-modal__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: #f1f5f9;
+  border-radius: 50%;
+  font-size: 20px;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  z-index: 10;
+}
+
+.article-modal__close:hover {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.article-modal__loading,
+.article-modal__error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px 20px;
+  color: #64748b;
+}
+
+.article-modal__spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: modalSpin 0.8s linear infinite;
+}
+
+@keyframes modalSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.article-modal__error {
+  color: #dc2626;
+}
+
+.article-modal__error button {
+  margin-top: 8px;
+  padding: 8px 16px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.article-modal__content {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.article-modal__title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e293b;
+  line-height: 1.4;
+  margin: 0 0 12px 0;
+  padding-right: 40px;
+}
+
+.article-modal__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 16px;
+}
+
+.article-modal__divider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 16px 0;
+}
+
+.article-modal__body {
+  font-size: var(--chat-font-size, 14px);
+  line-height: 1.7;
+  color: #334155;
+}
+
+.article-modal__body img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 12px 0;
+}
+
+.article-modal__body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 13px;
+}
+
+.article-modal__body th,
+.article-modal__body td {
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+.article-modal__body th {
+  background: #f8fafc;
+  font-weight: 600;
+}
+
+.article-modal__translation-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 24px 0 16px 0;
+}
+
+.article-modal__translation-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2563eb;
+  background: #eff6ff;
+  padding: 4px 12px;
+  border-radius: 4px;
+}
+
+.article-modal__translation-lang {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.article-modal__translation {
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 8px;
+  border-left: 3px solid #2563eb;
+}
+
+/* Mobile adjustments */
+@media (max-width: 480px) {
+  .article-modal__overlay {
+    padding: 8px;
+  }
+
+  .article-modal__container {
+    max-height: 90vh;
+    border-radius: 10px;
+  }
+
+  .article-modal__content {
+    padding: 16px;
+  }
+
+  .article-modal__title {
+    font-size: 16px;
+    padding-right: 32px;
+  }
+
+  .article-modal__close {
+    width: 28px;
+    height: 28px;
+    font-size: 18px;
+    top: 10px;
+    right: 10px;
+  }
+}

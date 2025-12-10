@@ -66,6 +66,9 @@ class Settings(BaseSettings):
         validation_alias="FINANCE_DATA_ENDPOINT",
     )
 
+    # --- 嵌入式聊天认证 ---
+    embed_auth_token: Optional[str] = Field(default=None, validation_alias="EMBED_AUTH_TOKEN")
+
     model_config = SettingsConfigDict(
         case_sensitive=False,
         env_file=".env",

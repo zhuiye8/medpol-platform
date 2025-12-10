@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import date, datetime
 from typing import Dict, List
 
 import psycopg
@@ -93,6 +94,10 @@ def similarity_search(query: str, top_k: int = 5) -> List[Dict]:
     results: List[Dict] = []
     for row in rows:
         record = dict(zip(cols, row))
+        # 转换 datetime 为 ISO 字符串，避免 JSON 序列化错误
+        for key, value in record.items():
+            if isinstance(value, (datetime, date)):
+                record[key] = value.isoformat()
         results.append(
             {
                 "text": record.pop("chunk_text", ""),
