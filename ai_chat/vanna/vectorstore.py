@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from collections import defaultdict
 from datetime import date, datetime
 from typing import Dict, List
 
@@ -46,66 +47,74 @@ def add_documents(docs: List[Dict], force: bool = False) -> int:
     if not docs:
         return 0
 
-    # 收集所有 article_id
-    article_ids = list({
-        item.get("metadata", {}).get("article_id")
-        for item in docs
-        if item.get("metadata", {}).get("article_id")
-    })
+    # 按 article_id 分组
+    by_article: Dict[str, List[Dict]] = defaultdict(list)
+    for item in docs:
+        article_id = item.get("metadata", {}).get("article_id")
+        if article_id:
+            by_article[article_id].append(item)
 
-    if not article_ids:
+    if not by_article:
         return 0
 
     inserted = 0
-    with _connect() as conn, conn.cursor() as cur:
-        if force:
-            # 强制模式：先删除这些文章的旧切片
-            cur.execute(
-                "DELETE FROM article_embeddings WHERE article_id = ANY(%s)",
-                (article_ids,),
-            )
-        else:
-            # 跳过模式：查询已存在的 article_id
-            cur.execute(
-                "SELECT DISTINCT article_id FROM article_embeddings WHERE article_id = ANY(%s)",
-                (article_ids,),
-            )
-            existing_ids = {row[0] for row in cur.fetchall()}
+    with _connect() as conn:
+        # 跳过模式：先查询已存在的 article_id
+        existing_ids: set = set()
+        if not force:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT DISTINCT article_id FROM article_embeddings WHERE article_id = ANY(%s)",
+                    (list(by_article.keys()),),
+                )
+                existing_ids = {row[0] for row in cur.fetchall()}
 
-        for item in docs:
-            text = item.get("text", "")
-            meta = item.get("metadata", {}) or {}
-            article_id = meta.get("article_id")
-            chunk_index = meta.get("chunk_index", 0)
-            if not text or not article_id:
-                continue
-
+        # 逐篇文章处理，每篇 commit 一次
+        for article_id, chunks in by_article.items():
             # 跳过模式：如果文章已存在则跳过
             if not force and article_id in existing_ids:
                 continue
 
-            embedding = get_embedding(text)
-            cur.execute(
-                """
-                INSERT INTO article_embeddings (id, article_id, chunk_index, chunk_text, embedding, model_name)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                ON CONFLICT (article_id, chunk_index) DO UPDATE SET
-                    chunk_text = EXCLUDED.chunk_text,
-                    embedding = EXCLUDED.embedding,
-                    model_name = EXCLUDED.model_name,
-                    updated_at = NOW()
-                """,
-                (
-                    str(uuid.uuid4()),
-                    article_id,
-                    int(chunk_index),
-                    text,
-                    Vector(embedding),
-                    _settings.ollama_embedding_model,
-                ),
-            )
-            inserted += 1
-        conn.commit()
+            with conn.cursor() as cur:
+                if force:
+                    # 强制模式：先删除这篇文章的旧切片
+                    cur.execute(
+                        "DELETE FROM article_embeddings WHERE article_id = %s",
+                        (article_id,),
+                    )
+
+                for item in chunks:
+                    text = item.get("text", "")
+                    meta = item.get("metadata", {}) or {}
+                    chunk_index = meta.get("chunk_index", 0)
+                    if not text:
+                        continue
+
+                    embedding = get_embedding(text)
+                    cur.execute(
+                        """
+                        INSERT INTO article_embeddings (id, article_id, chunk_index, chunk_text, embedding, model_name)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (article_id, chunk_index) DO UPDATE SET
+                            chunk_text = EXCLUDED.chunk_text,
+                            embedding = EXCLUDED.embedding,
+                            model_name = EXCLUDED.model_name,
+                            updated_at = NOW()
+                        """,
+                        (
+                            str(uuid.uuid4()),
+                            article_id,
+                            int(chunk_index),
+                            text,
+                            Vector(embedding),
+                            _settings.ollama_embedding_model,
+                        ),
+                    )
+                    inserted += 1
+
+            # 每篇文章处理完 commit 一次
+            conn.commit()
+
     return inserted
 
 
