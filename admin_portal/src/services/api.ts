@@ -8,7 +8,7 @@ import type {
 } from "@/types/api";
 
 const DEFAULT_BASE = "http://localhost:8000";
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || DEFAULT_BASE).replace(/\/$/, "");
+const API_BASE_URL = (import.meta.env.VITE_API_BASE || DEFAULT_BASE).replace(/\/$/, "");
 
 export type RequestOptions = RequestInit & { query?: Record<string, string | number | undefined> };
 
