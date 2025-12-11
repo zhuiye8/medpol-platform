@@ -261,9 +261,11 @@ function MessageBubble({ message, onViewArticle }: MessageBubbleProps) {
             ) : (
               content
             )
-          ) : (
-            status === "pending" && <ThinkingIndicator />
-          )}
+          ) : status === "pending" ? (
+            <ThinkingIndicator />
+          ) : status === "cancelled" ? (
+            <span className="medpol-chat__cancelled">已停止</span>
+          ) : null}
           {status === "streaming" && <span className="medpol-chat__cursor" />}
         </div>
 

@@ -582,6 +582,12 @@
   transform: scale(0.98);
 }
 
+/* Cancelled message state */
+.medpol-chat__cancelled {
+  color: #94a3b8;
+  font-style: italic;
+}
+
 /* ======================== Cards (Data / Chart / Search) ======================== */
 .chat-card {
   background: #ffffff;

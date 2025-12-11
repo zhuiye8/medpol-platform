@@ -112,7 +112,7 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   components?: ChatComponent[];
-  status?: "pending" | "streaming" | "complete" | "error";
+  status?: "pending" | "streaming" | "complete" | "error" | "cancelled";
   timestamp: Date;
 }
 

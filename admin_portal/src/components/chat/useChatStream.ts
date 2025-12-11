@@ -257,6 +257,20 @@ export function useChatStream(options: ChatOptions = {}) {
         isStreaming: false,
         currentStatus: null,
         currentTool: null,
+        // 将未完成的 assistant 消息标记为已取消
+        messages: prev.messages.map((msg) => {
+          if (
+            msg.role === "assistant" &&
+            (msg.status === "pending" || msg.status === "streaming")
+          ) {
+            return {
+              ...msg,
+              content: msg.content || "",
+              status: "cancelled" as const,
+            };
+          }
+          return msg;
+        }),
       }));
     }
   }, []);
