@@ -154,13 +154,14 @@ class MedpolChatElement extends HTMLElement {
         border-radius: 16px;
         line-height: 1.5;
         word-wrap: break-word;
-        white-space: pre-wrap;
+        white-space: normal;
       }
 
       .medpol-chat__bubble--user {
         background: #3b82f6;
         color: white;
         border-bottom-right-radius: 4px;
+        white-space: pre-wrap;
       }
 
       .medpol-chat__bubble--assistant {
@@ -172,6 +173,37 @@ class MedpolChatElement extends HTMLElement {
 
       .medpol-chat__bubble--streaming {
         animation: pulse 1.5s ease-in-out infinite;
+      }
+
+      /* Markdown 内容行距与缩进 */
+      .markdown-content {
+        line-height: 1.5;
+        font-size: 14px;
+        white-space: normal;
+      }
+
+      .markdown-content p {
+        margin: 0.25em 0;
+      }
+
+      .markdown-content p + p {
+        margin-top: 0.25em;
+      }
+
+      .markdown-content ul,
+      .markdown-content ol {
+        margin: 0.25em 0;
+        padding-left: 1.25em;
+        list-style-position: outside;
+      }
+
+      .markdown-content li {
+        margin: 0.15em 0;
+        line-height: 1.45;
+      }
+
+      .markdown-content strong {
+        font-weight: 600;
       }
 
       @keyframes pulse {

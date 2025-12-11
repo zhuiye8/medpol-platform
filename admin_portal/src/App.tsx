@@ -1,14 +1,24 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, NavLink, Route, Routes } from "react-router-dom";
+import { useHealth } from "@/hooks/useHealth";
+
+// 首屏关键页面：静态导入（立即加载）
 import DashboardPage from "@/pages/Dashboard";
 import ArticlesPage from "@/pages/Articles";
-import LogsPage from "@/pages/Logs";
-import CrawlerManagementPage from "@/pages/CrawlerManagement";
-import ArticleDetailPage from "@/pages/ArticleDetail";
-import FinanceDataPage from "@/pages/FinanceData";
-import EmbeddingsPage from "@/pages/Embeddings";
-import EmbedChatPage from "@/pages/EmbedChat";
-import MobilePreviewPage from "@/pages/MobilePreview";
-import { useHealth } from "@/hooks/useHealth";
+
+// 次要页面：懒加载（按需加载）
+const LogsPage = lazy(() => import("@/pages/Logs"));
+const CrawlerManagementPage = lazy(() => import("@/pages/CrawlerManagement"));
+const ArticleDetailPage = lazy(() => import("@/pages/ArticleDetail"));
+const FinanceDataPage = lazy(() => import("@/pages/FinanceData"));
+const EmbeddingsPage = lazy(() => import("@/pages/Embeddings"));
+const EmbedChatPage = lazy(() => import("@/pages/EmbedChat"));
+const MobilePreviewPage = lazy(() => import("@/pages/MobilePreview"));
+
+// 页面加载占位符
+function PageLoader() {
+  return <div className="panel" style={{ textAlign: "center", padding: "2rem" }}>加载中...</div>;
+}
 
 const NAV_ITEMS = [
   { path: "/", label: "概览" },
@@ -53,16 +63,18 @@ function AdminLayout() {
         </nav>
       </aside>
       <main className="content">
-        <Routes>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/articles" element={<ArticlesPage />} />
-          <Route path="/articles/:articleId" element={<ArticleDetailPage />} />
-          <Route path="/logs" element={<LogsPage />} />
-          <Route path="/crawler-management" element={<CrawlerManagementPage />} />
-          <Route path="/finance" element={<FinanceDataPage />} />
-          <Route path="/embeddings" element={<EmbeddingsPage />} />
-          <Route path="/mobile-preview" element={<MobilePreviewPage />} />
-        </Routes>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/articles" element={<ArticlesPage />} />
+            <Route path="/articles/:articleId" element={<ArticleDetailPage />} />
+            <Route path="/logs" element={<LogsPage />} />
+            <Route path="/crawler-management" element={<CrawlerManagementPage />} />
+            <Route path="/finance" element={<FinanceDataPage />} />
+            <Route path="/embeddings" element={<EmbeddingsPage />} />
+            <Route path="/mobile-preview" element={<MobilePreviewPage />} />
+          </Routes>
+        </Suspense>
       </main>
     </div>
   );
@@ -71,12 +83,14 @@ function AdminLayout() {
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        {/* Embed route - full screen, no sidebar */}
-        <Route path="/embed/chat" element={<EmbedChatPage />} />
-        {/* Admin routes - with sidebar */}
-        <Route path="/*" element={<AdminLayout />} />
-      </Routes>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          {/* Embed route - full screen, no sidebar */}
+          <Route path="/embed/chat" element={<EmbedChatPage />} />
+          {/* Admin routes - with sidebar */}
+          <Route path="/*" element={<AdminLayout />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

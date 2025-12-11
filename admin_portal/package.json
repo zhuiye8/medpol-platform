@@ -9,6 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@llm-ui/markdown": "^0.13.3",
+    "@llm-ui/react": "^0.13.3",
     "dayjs": "^1.11.11",
     "plotly.js-basic-dist-min": "^3.3.0",
     "react": "^18.3.1",

@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useChatStream } from "./useChatStream";
 import { ChatComponentRenderer } from "./ChatComponents";
-import { MarkdownRenderer } from "./MarkdownRenderer";
+import { LLMMarkdown } from "./LLMMarkdown";
 import { ArticleModal } from "./ArticleModal";
 import type { ChatMessage, ChatOptions } from "./types";
 import "./MedpolChat.css";
@@ -257,7 +257,7 @@ function MessageBubble({ message, onViewArticle }: MessageBubbleProps) {
         >
           {content ? (
             isAssistant ? (
-              <MarkdownRenderer content={content} />
+              <LLMMarkdown content={content} isStreaming={status === "streaming"} />
             ) : (
               content
             )

@@ -8,6 +8,12 @@ importers:
 
   .:
     dependencies:
+      '@llm-ui/markdown':
+        specifier: ^0.13.3
+        version: 0.13.3(react@18.3.1)
+      '@llm-ui/react':
+        specifier: ^0.13.3
+        version: 0.13.3(react@18.3.1)
       dayjs:
         specifier: ^1.11.11
         version: 1.11.19
@@ -294,6 +300,16 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
+
+  '@llm-ui/markdown@0.13.3':
+    resolution: {integrity: sha512-7wXte9RXQosSFKneYnVwnxUvwIgov7bE04nqA6PjMBDqxxeSI3FD5TFzrpBMj6+TN2Urraj5iJWaL4IdCQNtsA==}
+    peerDependencies:
+      react: ^18.0.0
+
+  '@llm-ui/react@0.13.3':
+    resolution: {integrity: sha512-b5UtUl8KZp+P4VyAypNqGnSv8jZVJlyYrH8wvOQNIa9x/Y3H4zWiSNTV5BYk5rOJ7WPDCruvLJX/G87+HR1gog==}
+    peerDependencies:
+      react: ^18.0.0
 
   '@mapbox/geojson-rewind@0.5.2':
     resolution: {integrity: sha512-tJaT+RbYGJYStt7wI3cq4Nl4SXxG8W7JDG5DMJu97V25RnbNg3QtQtf+KD+VLjNpWKYsRvXDNmNrBgEETr1ifA==}
@@ -1529,6 +1545,9 @@ packages:
   remark-stringify@11.0.0:
     resolution: {integrity: sha512-1OSmLd3awB/t8qdoEOMazZkNsfVTeY4fTsgzcQFdXNq8ToTN4ZGwrMnlda4K6smTFKD+GRV6O48i6Z4iKgPPpw==}
 
+  remeda@1.61.0:
+    resolution: {integrity: sha512-caKfSz9rDeSKBQQnlJnVW3mbVdFgxgGWQKq1XlFokqjf+hQD5gxutLGTTY2A/x24UxVyJe9gH5fAkFI63ULw4A==}
+
   resolve-protobuf-schema@2.1.0:
     resolution: {integrity: sha512-kI5ffTiZWmJaS/huM8wZfEMer1eRd7oJQhDuxeCLe3t7N7mX3z94CN0xPxBQxFYQTSNz9T0i+v6inKqSdK8xrQ==}
 
@@ -1999,6 +2018,24 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
+
+  '@llm-ui/markdown@0.13.3(react@18.3.1)':
+    dependencies:
+      '@llm-ui/react': 0.13.3(react@18.3.1)
+      mdast-util-from-markdown: 2.0.2
+      mdast-util-gfm: 3.1.0
+      mdast-util-to-markdown: 2.1.2
+      micromark-extension-gfm: 3.0.0
+      react: 18.3.1
+      remeda: 1.61.0
+      unist-util-visit: 5.0.0
+    transitivePeerDependencies:
+      - supports-color
+
+  '@llm-ui/react@0.13.3(react@18.3.1)':
+    dependencies:
+      react: 18.3.1
+      remeda: 1.61.0
 
   '@mapbox/geojson-rewind@0.5.2':
     dependencies:
@@ -3680,6 +3717,8 @@ snapshots:
       '@types/mdast': 4.0.4
       mdast-util-to-markdown: 2.1.2
       unified: 11.0.5
+
+  remeda@1.61.0: {}
 
   resolve-protobuf-schema@2.1.0:
     dependencies:

@@ -26,5 +26,17 @@ export default defineConfig({
   build: {
     outDir: "dist",
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // React 核心（稳定，长期缓存）
+          "vendor-react": ["react", "react-dom", "react-router-dom"],
+          // Plotly 图表库（大体积，按需加载）
+          "vendor-plotly": ["react-plotly.js", "plotly.js-basic-dist-min"],
+          // Markdown 渲染
+          "vendor-markdown": ["react-markdown", "remark-gfm"],
+        },
+      },
+    },
   },
 });

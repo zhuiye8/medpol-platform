@@ -212,9 +212,9 @@
 .medpol-chat__bubble {
   padding: 10px 12px;
   border-radius: 16px;
-  line-height: 1.38;
+  line-height: 1.5;
   word-wrap: break-word;
-  white-space: pre-wrap;
+  white-space: normal;
   max-width: 100%;
   overflow: hidden;
   font-size: var(--chat-font-size, 14px);
@@ -228,6 +228,7 @@
   box-shadow: 0 10px 24px rgba(37, 99, 235, 0.25);
   width: fit-content;
   max-width: 100%;
+  white-space: pre-wrap; /* 用户输入仍保留换行 */
 }
 
 .medpol-chat__bubble--assistant {
@@ -1002,8 +1003,9 @@
 
 /* ======================== Markdown Styles ======================== */
 .markdown-content {
-  line-height: 1.38;
+  line-height: 1.5;
   font-size: var(--chat-font-size, 14px);
+  white-space: normal;
 }
 
 .markdown-content > *:first-child {
@@ -1038,12 +1040,12 @@
 }
 
 .markdown-content p {
-  margin: 0.35em 0;
+  margin: 0.25em 0;
 }
 
 /* 连续段落间距更紧凑 */
 .markdown-content p + p {
-  margin-top: 0.35em;
+  margin-top: 0.25em;
 }
 
 .markdown-content strong {
@@ -1066,13 +1068,14 @@
 
 .markdown-content ul,
 .markdown-content ol {
-  margin: 0.35em 0;
-  padding-left: 1.2em;
+  margin: 0.25em 0;
+  padding-left: 1.25em;
+  list-style-position: outside;
 }
 
 .markdown-content li {
-  margin: 0.2em 0;
-  line-height: 1.38;
+  margin: 0.15em 0;
+  line-height: 1.45;
 }
 
 .markdown-content li > ul,

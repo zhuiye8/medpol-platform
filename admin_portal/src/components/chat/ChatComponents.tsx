@@ -1,13 +1,15 @@
 /**
  * Subcomponents for chat message rendering
  * - DataFrameRenderer: Table display for SQL query results
- * - ChartRenderer: Plotly visualization (mobile-friendly)
+ * - ChartRenderer: Plotly visualization (mobile-friendly, lazy loaded)
  * - SearchResultsRenderer: Policy document search results
  */
-import { useState } from "react";
-import Plot from "react-plotly.js";
+import { useState, lazy, Suspense } from "react";
 import type { Data, Layout, Config } from "plotly.js";
 import type { DataFrameData, ChartData, SearchResult, SearchResultsData } from "./types";
+
+// 动态导入 Plotly（约 3MB），仅在需要图表时加载
+const Plot = lazy(() => import("react-plotly.js"));
 
 // ======================== DataFrameRenderer ========================
 
@@ -124,13 +126,15 @@ export function ChartRenderer({ data, title }: ChartProps) {
         <h4 className="chat-card__title">{title || "数据可视化"}</h4>
       </div>
       <div className="chat-chart__container">
-        <Plot
-          data={plotlyData}
-          layout={mergedLayout}
-          config={plotlyConfig}
-          style={{ width: "100%", height: "100%" }}
-          useResizeHandler
-        />
+        <Suspense fallback={<div className="chat-chart__loading">图表加载中...</div>}>
+          <Plot
+            data={plotlyData}
+            layout={mergedLayout}
+            config={plotlyConfig}
+            style={{ width: "100%", height: "100%" }}
+            useResizeHandler
+          />
+        </Suspense>
       </div>
     </div>
   );
@@ -160,7 +164,7 @@ export function SearchResultsRenderer({ data, onViewArticle }: SearchResultsProp
       {isExpanded && (
         <div className="chat-search-results__list">
           {results.map((result, i) => (
-            <SearchResultItem key={result.article_id || i} result={result} onViewArticle={onViewArticle} />
+            <SearchResultItem key={`${result.article_id}-${i}`} result={result} onViewArticle={onViewArticle} />
           ))}
         </div>
       )}

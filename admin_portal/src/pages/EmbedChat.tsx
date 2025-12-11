@@ -9,11 +9,28 @@
  * - Mode selection via URL parameter
  * - Safe area insets for notch/home indicator
  * - Dynamic viewport height for keyboard handling
+ * - Plotly preloading for instant chart display
  */
 import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { MedpolChat } from "@/components/chat";
 import "./EmbedChat.css";
+
+/**
+ * 预加载 Plotly 图表库（约 4.8MB）
+ * 在用户进入聊天页面时后台静默加载，确保 AI 返回图表时能即时显示
+ */
+function usePlotlyPreload() {
+  useEffect(() => {
+    // 延迟 1 秒后开始预加载，避免影响首屏渲染
+    const timer = setTimeout(() => {
+      import("react-plotly.js").catch(() => {
+        // 预加载失败不影响功能，实际使用时会重试
+      });
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, []);
+}
 
 /**
  * Setup viewport meta for safe area support
@@ -68,6 +85,7 @@ const PLACEHOLDERS: Record<ChatMode, string> = {
 
 export default function EmbedChatPage() {
   useViewportSetup();
+  usePlotlyPreload(); // 后台预加载图表库
   const [searchParams] = useSearchParams();
 
   const mode = (searchParams.get("mode") as ChatMode) || "hybrid";
