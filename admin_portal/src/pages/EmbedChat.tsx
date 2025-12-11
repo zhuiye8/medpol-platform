@@ -79,7 +79,7 @@ const WELCOME_MESSAGES: Record<ChatMode, string> = {
 
 const PLACEHOLDERS: Record<ChatMode, string> = {
   rag: "输入政策相关问题...",
-  sql: "输入财务查询问题，如：联环集团9月营业收入",
+  sql: "输入财务相关问题...",
   hybrid: "输入您的问题...",
 };
 
