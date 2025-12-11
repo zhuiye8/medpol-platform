@@ -35,6 +35,11 @@ function usePlotlyPreload() {
 /**
  * Setup viewport meta for safe area support
  * This ensures env(safe-area-inset-*) works correctly
+ *
+ * Note: We intentionally do NOT listen to visualViewport resize events.
+ * iOS Safari automatically scrolls to keep the focused input visible
+ * above the keyboard. Our previous JS code was interfering with this
+ * native behavior, causing the input to jump to the top of the screen.
  */
 function useViewportSetup() {
   useEffect(() => {
@@ -49,23 +54,7 @@ function useViewportSetup() {
       "content",
       "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     );
-
-    // Handle iOS keyboard via visualViewport
-    const updateHeight = () => {
-      if (window.visualViewport) {
-        document.documentElement.style.setProperty(
-          "--app-height",
-          `${window.visualViewport.height}px`
-        );
-      }
-    };
-
-    window.visualViewport?.addEventListener("resize", updateHeight);
-    updateHeight();
-
-    return () => {
-      window.visualViewport?.removeEventListener("resize", updateHeight);
-    };
+    // Let iOS Safari handle keyboard layout natively - no JS intervention needed
   }, []);
 }
 

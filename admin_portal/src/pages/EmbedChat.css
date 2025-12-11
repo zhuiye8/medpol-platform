@@ -3,31 +3,12 @@
  *
  * Mobile-first design with:
  * - Safe area insets for notch/home indicator
- * - Dynamic viewport height (dvh) for keyboard handling
- * - Viewport meta tag support
+ * - iOS Safari native keyboard handling (no JS intervention)
  */
-
-/* Ensure viewport meta is respected */
-@supports (height: 100dvh) {
-  :root {
-    --app-height: 100dvh;
-  }
-}
-
-@supports not (height: 100dvh) {
-  :root {
-    --app-height: 100vh;
-  }
-}
 
 .embed-chat {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  /* Use dynamic viewport height for keyboard handling */
-  height: var(--app-height, 100vh);
+  inset: 0; /* Equivalent to top:0; right:0; bottom:0; left:0; */
   background: #f8fafc;
   display: flex;
   flex-direction: column;
@@ -36,6 +17,8 @@
   padding-left: env(safe-area-inset-left, 0);
   padding-right: env(safe-area-inset-right, 0);
   /* Bottom padding handled by input area */
+  /* Let iOS Safari handle keyboard layout natively */
+  overflow: hidden;
 }
 
 /* Override MedpolChat container for full-screen */
