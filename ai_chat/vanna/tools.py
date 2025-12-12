@@ -222,120 +222,228 @@ class FinanceChartTool(Tool[ChartArgs]):
     def _build_plotly_config(self, data: Dict[str, Any], chart_type: str, title: str = "") -> Dict[str, Any]:
         """根据数据和图表类型构建 Plotly 配置。
 
-        Plotly 格式:
-        {
-            "data": [{ "type": "bar", "x": [...], "y": [...] }],
-            "layout": { "title": {...}, "xaxis": {...}, "yaxis": {...} }
-        }
+        智能检测数据维度，支持：
+        - 多公司时间序列：按公司分组，每公司一条线/柱
+        - 多公司单时间点：X轴为公司，柱状图对比
+        - 多指标时间序列：按指标分组
+        - 单系列：原有逻辑
         """
         headers = data["headers"]
         rows = data["rows"]
 
-        # 智能识别 X 轴和数值列（优先使用 keep_date 作为时间轴，company_name 作为分类轴）
-        x_col = None
-        value_cols = []
+        # Plotly 配色方案（扩展到支持更多系列）
+        colors = [
+            "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899",
+            "#06b6d4", "#84cc16", "#f97316", "#6366f1", "#14b8a6", "#a855f7",
+        ]
 
-        # 优先级：keep_date > company_name > company_no > 其他
-        priority_x_cols = ["keep_date", "company_name", "company_no"]
-        for prio_col in priority_x_cols:
-            if prio_col in headers:
-                x_col = prio_col
-                break
-
-        # 如果没有优先列，使用原来的逻辑
-        if not x_col:
-            for h in headers:
-                h_lower = h.lower()
-                if any(k in h_lower for k in ["date", "month", "time", "company", "name"]):
-                    x_col = h
-                    break
+        # 1. 识别数据维度
+        has_company = "company_name" in headers
+        has_time = "keep_date" in headers
+        has_type = "type_name" in headers
 
         # 识别数值列
+        value_cols = []
         for h in headers:
             h_lower = h.lower()
             if any(k in h_lower for k in ["amount", "rate", "total", "revenue", "profit"]):
                 value_cols.append(h)
-
-        # 如果没有识别到，使用默认列
-        if not x_col and headers:
-            x_col = headers[0]
         if not value_cols and len(headers) > 1:
-            value_cols = [h for h in headers[1:] if h != x_col][:2]
+            # 排除已知的分类列
+            exclude = {"company_name", "company_no", "keep_date", "type_name", "type_no"}
+            value_cols = [h for h in headers if h not in exclude][:2]
 
-        # 提取 X 轴数据并转换格式
+        val_col = value_cols[0] if value_cols else headers[-1]
+
+        # 2. 饼图特殊处理
+        if chart_type == "pie":
+            return self._build_pie_config(rows, headers, val_col, colors, title)
+
+        # 3. 确定分组策略
+        group_col = None
+        x_col = None
+
+        if has_company and has_time:
+            # 场景1：多公司时间序列 → 按公司分组，X轴为时间
+            group_col = "company_name"
+            x_col = "keep_date"
+        elif has_type and has_time:
+            # 场景3：多指标时间序列 → 按指标分组
+            group_col = "type_name"
+            x_col = "keep_date"
+        elif has_company and not has_time:
+            # 场景2：多公司单时间点 → X轴为公司
+            group_col = None
+            x_col = "company_name"
+        elif has_time:
+            # 单公司时间序列
+            group_col = None
+            x_col = "keep_date"
+        else:
+            # 默认：使用第一列作为X轴
+            x_col = headers[0] if headers else None
+
+        # 4. 构建 traces
+        if group_col:
+            traces = self._build_grouped_traces(rows, group_col, x_col, val_col, chart_type, colors)
+        else:
+            traces = self._build_single_traces(rows, x_col, value_cols, chart_type, colors)
+
+        # 5. 智能布局配置
+        series_count = len(traces)
+        x_data_len = len(traces[0]["x"]) if traces and traces[0].get("x") else 0
+
+        layout = {
+            "title": {"text": title, "font": {"size": 14}},
+            "xaxis": {
+                "title": {"text": _get_display_name(x_col) if x_col else ""},
+                "tickangle": -45 if x_data_len > 6 else (-30 if x_data_len > 4 else 0),
+                "tickfont": {"size": 10},
+            },
+            "yaxis": {
+                "title": {"text": "金额（万元）"},
+                "tickfont": {"size": 10},
+            },
+            "barmode": "group",
+            "showlegend": series_count > 1,
+            "hovermode": "x unified",
+        }
+
+        # 图例策略：>3 系列时竖向放右侧，否则水平放下方
+        if series_count > 3:
+            layout["legend"] = {
+                "orientation": "v",
+                "x": 1.02,
+                "y": 1,
+                "xanchor": "left",
+                "font": {"size": 10},
+            }
+            layout["margin"] = {"l": 50, "r": 120, "t": 40, "b": 70}
+        else:
+            layout["legend"] = {
+                "orientation": "h",
+                "y": -0.2,
+                "x": 0.5,
+                "xanchor": "center",
+                "font": {"size": 10},
+            }
+            layout["margin"] = {"l": 50, "r": 20, "t": 40, "b": 80}
+
+        return {"data": traces, "layout": layout}
+
+    def _build_pie_config(self, rows, headers, val_col, colors, title):
+        """构建饼图配置。"""
+        # 确定标签列
+        label_col = None
+        for col in ["company_name", "type_name", "company_no"]:
+            if col in headers:
+                label_col = col
+                break
+        if not label_col:
+            label_col = headers[0] if headers else None
+
+        labels = []
+        values = []
+        for row in rows:
+            try:
+                value = float(row.get(val_col, 0) or 0)
+                label = row.get(label_col, "")
+                if label_col == "company_no":
+                    label = _get_company_name(str(label))
+                labels.append(str(label) if label else "未知")
+                values.append(value)
+            except (ValueError, TypeError):
+                pass
+
+        return {
+            "data": [{
+                "type": "pie",
+                "labels": labels,
+                "values": values,
+                "hole": 0.4,
+                "textinfo": "label+percent",
+                "hovertemplate": "%{label}<br>%{value:,.2f}万元<br>%{percent}<extra></extra>",
+                "marker": {"colors": colors[:len(labels)]},
+            }],
+            "layout": {
+                "title": {"text": title, "font": {"size": 14}},
+                "showlegend": True,
+                "legend": {"orientation": "v", "x": 1.02, "y": 1, "font": {"size": 10}},
+                "margin": {"l": 20, "r": 100, "t": 40, "b": 20},
+            },
+        }
+
+    def _build_grouped_traces(self, rows, group_col, x_col, val_col, chart_type, colors):
+        """按分组列构建多系列 traces（多公司/多指标）。"""
+        # 获取所有分组
+        groups = sorted(set(str(row.get(group_col, "")) for row in rows if row.get(group_col)))
+
+        traces = []
+        for i, group in enumerate(groups):
+            # 筛选该分组的数据
+            group_rows = [r for r in rows if str(r.get(group_col, "")) == group]
+            # 按X轴排序
+            group_rows.sort(key=lambda r: str(r.get(x_col, "")))
+
+            x_data = []
+            y_data = []
+            for row in group_rows:
+                # X轴格式化
+                x_val = row.get(x_col, "")
+                if x_col == "keep_date" and x_val:
+                    x_val = self._format_date(x_val)
+                else:
+                    x_val = str(x_val) if x_val else ""
+                x_data.append(x_val)
+
+                # Y轴数值
+                try:
+                    y_val = float(row.get(val_col, 0) or 0)
+                except (ValueError, TypeError):
+                    y_val = 0
+                y_data.append(y_val)
+
+            trace = {
+                "type": "scatter" if chart_type == "line" else "bar",
+                "name": group,  # 使用分组名作为图例
+                "x": x_data,
+                "y": y_data,
+                "marker": {"color": colors[i % len(colors)]},
+            }
+
+            if chart_type == "line":
+                trace["mode"] = "lines+markers"
+                trace["line"] = {"shape": "spline", "smoothing": 1.3}
+
+            traces.append(trace)
+
+        return traces
+
+    def _build_single_traces(self, rows, x_col, value_cols, chart_type, colors):
+        """构建单系列或按数值列分组的 traces。"""
+        # 提取 X 轴数据
         x_data = []
         for row in rows:
             val = row.get(x_col, "")
-            # company_no 转换为公司名称
             if x_col == "company_no":
                 val = _get_company_name(str(val) if val else "")
-            # company_name 直接使用 API 返回值
             elif x_col == "company_name":
                 val = str(val) if val else ""
-            # keep_date 格式化为"X月"
             elif x_col == "keep_date" and val:
-                try:
-                    # 处理 datetime/date 对象或字符串
-                    if hasattr(val, "month"):
-                        # datetime 或 date 对象
-                        val = f"{val.month}月"
-                    else:
-                        # 字符串格式 "YYYY-MM-DD"
-                        parts = str(val).split("-")
-                        if len(parts) >= 2:
-                            val = f"{int(parts[1])}月"
-                except (ValueError, IndexError, AttributeError):
-                    val = str(val)
+                val = self._format_date(val)
             else:
                 val = str(val) if val else ""
             x_data.append(val)
 
-        # Plotly 配色方案
-        colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"]
-
-        if chart_type == "pie":
-            # 饼图（数据库已是万元单位，无需转换）
-            val_col = value_cols[0] if value_cols else headers[-1]
-            labels = []
-            values = []
-            for i, row in enumerate(rows):
-                try:
-                    value = float(row.get(val_col, 0) or 0)
-                    name = x_data[i] if i < len(x_data) else str(row.get(x_col, ""))
-                    labels.append(name)
-                    values.append(value)
-                except (ValueError, TypeError):
-                    pass
-
-            return {
-                "data": [{
-                    "type": "pie",
-                    "labels": labels,
-                    "values": values,
-                    "hole": 0.4,  # Donut chart
-                    "textinfo": "label+percent",
-                    "hovertemplate": "%{label}<br>%{value:,.2f}万元<br>%{percent}<extra></extra>",
-                    "marker": {"colors": colors[:len(labels)]},
-                }],
-                "layout": {
-                    "title": {"text": title, "font": {"size": 16}},
-                    "showlegend": True,
-                    "legend": {"orientation": "v", "x": 0, "y": 1},
-                    "margin": {"l": 20, "r": 20, "t": 50, "b": 20},
-                },
-            }
-
-        # 折线图或柱状图（数据库已是万元单位，无需转换）
         traces = []
         for i, col in enumerate(value_cols):
             display_name = _get_display_name(col)
             y_data = []
-            text_data = []  # 格式化的数值文本
+            text_data = []
             for row in rows:
                 try:
                     val = float(row.get(col, 0) or 0)
                     y_data.append(val)
-                    # 格式化数值：大于1万显示为x.xx万，否则显示原值
                     if val >= 10000:
                         text_data.append(f"{val/10000:.2f}亿")
                     elif val >= 1:
@@ -363,24 +471,20 @@ class FinanceChartTool(Tool[ChartArgs]):
 
             traces.append(trace)
 
-        return {
-            "data": traces,
-            "layout": {
-                "title": {"text": title, "font": {"size": 16}},
-                "xaxis": {
-                    "title": {"text": _get_display_name(x_col) if x_col else ""},
-                    "tickangle": -30 if len(x_data) > 5 else 0,
-                },
-                "yaxis": {
-                    "title": {"text": "金额（万元）"},
-                },
-                "barmode": "group",
-                "showlegend": len(traces) > 1,
-                "legend": {"orientation": "h", "y": -0.2},
-                "margin": {"l": 60, "r": 20, "t": 50, "b": 80},
-                "hovermode": "x unified",
-            },
-        }
+        return traces
+
+    def _format_date(self, val) -> str:
+        """将日期格式化为 'X月' 形式。"""
+        try:
+            if hasattr(val, "month"):
+                return f"{val.month}月"
+            else:
+                parts = str(val).split("-")
+                if len(parts) >= 2:
+                    return f"{int(parts[1])}月"
+        except (ValueError, IndexError, AttributeError):
+            pass
+        return str(val)
 
 
 def build_tools(mode: str) -> List[Tool]:

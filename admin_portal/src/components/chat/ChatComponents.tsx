@@ -75,25 +75,33 @@ interface ChartProps {
 
 export function ChartRenderer({ data, title }: ChartProps) {
   const { config } = data;
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Plotly config comes from backend with { data, layout } structure
   const plotlyData = (config as { data?: Data[] }).data || [];
   const plotlyLayout = (config as { layout?: Partial<Layout> }).layout || {};
 
+  // 检测系列数量，用于智能布局
+  const seriesCount = plotlyData.length;
+  const hasRightLegend = seriesCount > 3;
+
   // Merge custom layout with defaults for mobile-friendly display
+  // 保留后端的图例配置，只在后端没提供时使用默认值
   const mergedLayout: Partial<Layout> = {
     ...plotlyLayout,
     autosize: true,
-    // 移除图表内部标题（卡片已有标题）
     title: undefined,
-    // 优化字体
     font: { family: "system-ui, -apple-system, sans-serif", size: 11 },
-    // 优化边距，给Y轴标签留空间
-    margin: { l: 50, r: 15, t: 10, b: 60 },
-    // X轴优化：旋转标签避免重叠
+    // 根据图例方向动态调整边距
+    margin: {
+      l: 50,
+      r: hasRightLegend ? 110 : 15,
+      t: 10,
+      b: hasRightLegend ? 60 : 70,
+    },
+    // X轴优化
     xaxis: {
       ...(plotlyLayout.xaxis || {}),
-      tickangle: -45,
       tickfont: { size: 10 },
       title: { ...(plotlyLayout.xaxis?.title || {}), font: { size: 11 } },
     },
@@ -103,8 +111,8 @@ export function ChartRenderer({ data, title }: ChartProps) {
       tickfont: { size: 10 },
       title: { ...(plotlyLayout.yaxis?.title || {}), font: { size: 11 } },
     },
-    // 图例优化
-    legend: {
+    // 保留后端图例配置（后端已根据系列数量智能配置）
+    legend: plotlyLayout.legend || {
       font: { size: 10 },
       orientation: "h",
       y: -0.25,
@@ -116,25 +124,122 @@ export function ChartRenderer({ data, title }: ChartProps) {
   // Plotly config for interactivity
   const plotlyConfig: Partial<Config> = {
     responsive: true,
-    displayModeBar: false, // Hide toolbar on mobile
+    displayModeBar: false,
     scrollZoom: false,
+    // 双击重置视图，可关闭 hover 浮窗
+    doubleClick: "reset",
   };
 
   return (
-    <div className="chat-card chat-chart">
-      <div className="chat-card__header">
-        <h4 className="chat-card__title">{title || "数据可视化"}</h4>
+    <>
+      <div className="chat-card chat-chart">
+        <div className="chat-card__header">
+          <h4 className="chat-card__title">{title || "数据可视化"}</h4>
+          <button
+            type="button"
+            className="chat-chart__fullscreen-btn"
+            onClick={() => setIsFullscreen(true)}
+            title="全屏查看"
+          >
+            ⛶
+          </button>
+        </div>
+        <div className="chat-chart__container">
+          <Suspense fallback={<div className="chat-chart__loading">图表加载中...</div>}>
+            <Plot
+              data={plotlyData}
+              layout={mergedLayout}
+              config={plotlyConfig}
+              style={{ width: "100%", height: "100%" }}
+              useResizeHandler
+            />
+          </Suspense>
+        </div>
       </div>
-      <div className="chat-chart__container">
-        <Suspense fallback={<div className="chat-chart__loading">图表加载中...</div>}>
-          <Plot
-            data={plotlyData}
-            layout={mergedLayout}
-            config={plotlyConfig}
-            style={{ width: "100%", height: "100%" }}
-            useResizeHandler
-          />
-        </Suspense>
+
+      {/* 全屏模态框 */}
+      {isFullscreen && (
+        <ChartFullscreenModal
+          data={plotlyData}
+          layout={plotlyLayout}
+          title={title || "数据可视化"}
+          onClose={() => setIsFullscreen(false)}
+        />
+      )}
+    </>
+  );
+}
+
+// ======================== ChartFullscreenModal ========================
+
+interface ChartFullscreenModalProps {
+  data: Data[];
+  layout: Partial<Layout>;
+  title: string;
+  onClose: () => void;
+}
+
+function ChartFullscreenModal({ data, layout, title, onClose }: ChartFullscreenModalProps) {
+  // 全屏模式下的布局优化
+  const fullscreenLayout: Partial<Layout> = {
+    ...layout,
+    autosize: true,
+    title: undefined,
+    font: { family: "system-ui, -apple-system, sans-serif", size: 12 },
+    margin: { l: 60, r: 120, t: 20, b: 80 },
+    // 默认使用 pan 模式（dragmode 是 layout 属性，不是 config 属性）
+    dragmode: "pan",
+    // 全屏模式强制使用竖向图例
+    legend: {
+      orientation: "v",
+      x: 1.02,
+      y: 1,
+      xanchor: "left",
+      font: { size: 11 },
+    },
+    xaxis: {
+      ...(layout.xaxis || {}),
+      tickfont: { size: 11 },
+    },
+    yaxis: {
+      ...(layout.yaxis || {}),
+      tickfont: { size: 11 },
+    },
+  };
+
+  const fullscreenConfig: Partial<Config> = {
+    responsive: true,
+    displayModeBar: true,
+    scrollZoom: true,
+    // 移除 Plotly logo
+    displaylogo: false,
+    modeBarButtonsToRemove: ["lasso2d", "select2d"],
+  };
+
+  return (
+    <div className="chart-fullscreen-modal" onClick={onClose}>
+      <div className="chart-fullscreen-modal__content" onClick={(e) => e.stopPropagation()}>
+        <div className="chart-fullscreen-modal__header">
+          <h3 className="chart-fullscreen-modal__title">{title}</h3>
+          <button
+            type="button"
+            className="chart-fullscreen-modal__close"
+            onClick={onClose}
+          >
+            ✕
+          </button>
+        </div>
+        <div className="chart-fullscreen-modal__body">
+          <Suspense fallback={<div className="chat-chart__loading">图表加载中...</div>}>
+            <Plot
+              data={data}
+              layout={fullscreenLayout}
+              config={fullscreenConfig}
+              style={{ width: "100%", height: "100%" }}
+              useResizeHandler
+            />
+          </Suspense>
+        </div>
       </div>
     </div>
   );

@@ -26,6 +26,13 @@ const markdownComponents: Components = {
       {children}
     </a>
   ),
+  // Filter invalid images (LLM may generate ![title]() with empty src)
+  img: ({ src, alt }) => {
+    if (!src || src.trim() === "") {
+      return null;
+    }
+    return <img src={src} alt={alt || ""} />;
+  },
   // Code styling
   code: ({ className, children, ...props }) => {
     const isInline = !className;

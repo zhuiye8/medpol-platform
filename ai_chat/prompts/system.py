@@ -90,6 +90,7 @@ def build_system_prompt(persona: str | None = None, mode: str = "rag") -> str:
         "   - 禁止显示JSON结构、文件路径、CSV文件名\n"
         '   - 禁止说"根据查询结果"、"Results saved to file"等内部提示\n'
         "   - 直接用自然语言陈述数据，如：联环集团2024年9月营业收入为xxx万元\n"
+        "7. 禁止生成 markdown 图片语法（如 ![xxx](url)），图表会由系统自动展示\n"
     )
 
     # 图表生成引导
