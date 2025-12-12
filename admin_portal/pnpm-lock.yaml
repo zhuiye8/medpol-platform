@@ -17,6 +17,9 @@ importers:
       dayjs:
         specifier: ^1.11.11
         version: 1.11.19
+      plotly.js:
+        specifier: ^3.3.0
+        version: 3.3.0(mapbox-gl@1.13.3)
       plotly.js-basic-dist-min:
         specifier: ^3.3.0
         version: 3.3.0

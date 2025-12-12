@@ -8,8 +8,16 @@ import { useState, lazy, Suspense } from "react";
 import type { Data, Layout, Config } from "plotly.js";
 import type { DataFrameData, ChartData, SearchResult, SearchResultsData } from "./types";
 
-// 动态导入 Plotly（约 3MB），仅在需要图表时加载
-const Plot = lazy(() => import("react-plotly.js"));
+// 动态导入 Plotly（约 3MB），仅在需要图表时加载；同时加载中文 locale
+const Plot = lazy(async () => {
+  const mod = await import("react-plotly.js");
+  // 注册 Plotly 中文语言包（modebar/提示语等）
+  await import("plotly.js/dist/plotly-locale-zh-cn");
+  if (typeof window !== "undefined" && (window as any).Plotly?.setPlotConfig) {
+    (window as any).Plotly.setPlotConfig({ locale: "zh-CN" });
+  }
+  return { default: mod.default };
+});
 
 // ======================== DataFrameRenderer ========================
 
@@ -124,6 +132,7 @@ export function ChartRenderer({ data, title }: ChartProps) {
   // Plotly config for interactivity
   const plotlyConfig: Partial<Config> = {
     responsive: true,
+    locale: "zh-CN",
     displayModeBar: false,
     scrollZoom: false,
     // 双击重置视图，可关闭 hover 浮窗
@@ -209,6 +218,7 @@ function ChartFullscreenModal({ data, layout, title, onClose }: ChartFullscreenM
 
   const fullscreenConfig: Partial<Config> = {
     responsive: true,
+    locale: "zh-CN",
     displayModeBar: true,
     scrollZoom: true,
     // 移除 Plotly logo
