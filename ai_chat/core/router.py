@@ -218,11 +218,13 @@ async def chat_stream(
             yield _sse_line(_safe_json_dumps(
                 SSESessionEvent(conversation_id=conv_id).model_dump()
             ))
+            await asyncio.sleep(0)
 
             # Send initial status
             yield _sse_line(_safe_json_dumps(
                 SSEStatusEvent(content="正在处理您的请求...").model_dump()
             ))
+            await asyncio.sleep(0)
 
             # Get streaming agent
             agent = _get_agent(mode, stream=True)
@@ -255,6 +257,7 @@ async def chat_stream(
                             yield _sse_line(_safe_json_dumps(
                                 SSEToolStartEvent(tool=tool_name).model_dump()
                             ))
+                            await asyncio.sleep(0)
 
             # 发送工具产生的待处理组件（搜索结果卡片、图表等）
             registry = getattr(agent, "tool_registry", None)
