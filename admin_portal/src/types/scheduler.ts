@@ -102,3 +102,25 @@ export interface PipelineRunList {
   items: PipelineRunItem[];
   total: number;
 }
+
+// 代理配置相关类型
+export type ProxyMode = "auto" | "always" | "never";
+
+export interface SourceProxyItem {
+  source_id: string;
+  source_name: string;
+  crawler_name?: string | null;
+  proxy_mode: ProxyMode;
+  proxy_url?: string | null;
+  proxy_needed?: boolean | null;
+  proxy_last_used?: boolean | null;
+}
+
+export interface SourceProxyListData {
+  items: SourceProxyItem[];
+}
+
+export interface UpdateProxyConfigRequest {
+  proxy_mode?: ProxyMode;
+  proxy_url?: string | null;
+}

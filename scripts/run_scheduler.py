@@ -11,6 +11,7 @@ from common.persistence.database import get_session_factory, session_scope
 from common.persistence import models
 from common.persistence.repository import CrawlerJobRepository
 from scheduler_service.job_runner import calculate_next_run, execute_job_once
+from crawler_service.scheduler import _load_crawlers
 
 
 def utc_now() -> datetime:
@@ -57,6 +58,9 @@ def main() -> None:
     parser.add_argument("--interval", type=int, default=60, help="轮询间隔（秒）")
     parser.add_argument("--once", action="store_true", help="只运行一次并退出")
     args = parser.parse_args()
+
+    # 加载所有爬虫模块
+    _load_crawlers()
 
     session_factory = get_session_factory()
 

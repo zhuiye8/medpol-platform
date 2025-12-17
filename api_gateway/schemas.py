@@ -194,6 +194,36 @@ class CeleryStatus(BaseModel):
     detail: str
 
 
+class ProxyConfig(BaseModel):
+    """代理配置"""
+    proxy_mode: Literal["auto", "always", "never"] = "auto"
+    proxy_url: Optional[str] = None
+    proxy_needed: Optional[bool] = None
+    proxy_last_used: Optional[bool] = None
+
+
+class SourceProxyItem(BaseModel):
+    """来源代理状态"""
+    source_id: str
+    source_name: str
+    crawler_name: Optional[str] = None
+    proxy_mode: str = "auto"
+    proxy_url: Optional[str] = None
+    proxy_needed: Optional[bool] = None
+    proxy_last_used: Optional[bool] = None
+
+
+class SourceProxyListData(BaseModel):
+    """来源代理状态列表"""
+    items: List[SourceProxyItem]
+
+
+class UpdateProxyConfigRequest(BaseModel):
+    """更新代理配置请求"""
+    proxy_mode: Optional[Literal["auto", "always", "never"]] = None
+    proxy_url: Optional[str] = None
+
+
 class ResetResultData(BaseModel):
     truncated_tables: List[str]
     cleared_dirs: List[str]

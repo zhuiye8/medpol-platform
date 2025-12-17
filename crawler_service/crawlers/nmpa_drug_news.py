@@ -101,6 +101,14 @@ class NMPADrugNewsCrawler(BaseCrawler):
 
     # ---- HTTP helpers ----
     def _get_html(self, url: str, referer: Optional[str] = None, wait_selector: Optional[str] = None) -> Optional[str]:
+        # 自动检测本地 CDP 服务
+        if not self.remote_cdp:
+            from ..playwright_runner import _get_cdp_ws_url
+            auto_cdp = _get_cdp_ws_url()
+            if auto_cdp:
+                self.remote_cdp = auto_cdp
+                self.logger.info("自动检测到本地 CDP: %s", auto_cdp[:50])
+
         # 0) 复用远程已登录浏览器（CDP）
         if HAVE_PLAYWRIGHT and self.remote_cdp:
             try:
@@ -108,6 +116,11 @@ class NMPADrugNewsCrawler(BaseCrawler):
                     browser = p.chromium.connect_over_cdp(self.remote_cdp)
                     context = browser.contexts[0] if browser.contexts else browser.new_context()
                     page = context.new_page()
+
+                    # 预热：先访问首页获取 cookie，避免 412
+                    page.goto("https://www.nmpa.gov.cn/", wait_until="domcontentloaded", timeout=30000)
+                    page.wait_for_timeout(2000)
+
                     body_bytes: Optional[bytes] = None
 
                     def _on_resp(resp):
@@ -119,23 +132,25 @@ class NMPADrugNewsCrawler(BaseCrawler):
                                 body_bytes = None
 
                     page.on("response", _on_resp)
-                    resp = page.goto(url, wait_until="domcontentloaded", timeout=20000)
+                    resp = page.goto(url, wait_until="domcontentloaded", timeout=30000)
                     if resp and resp.status != 200:
-                        self.logger.warning("CDP 目标状态码 %s", resp.status)
+                        self.logger.warning("CDP 目标状态码 %s，等待 JS 渲染", resp.status)
                     try:
-                        page.wait_for_load_state("networkidle", timeout=8000)
+                        page.wait_for_load_state("networkidle", timeout=15000)
                     except Exception:
                         pass
+                    # NMPA 网站需要额外等待 JS 渲染
+                    page.wait_for_timeout(3000)
                     if wait_selector:
                         try:
-                            page.wait_for_selector(wait_selector, timeout=5000)
+                            page.wait_for_selector(wait_selector, timeout=10000)
                         except Exception:
                             pass
 
                     html = None
-                    if body_bytes:
+                    if body_bytes and len(body_bytes) > 500:
                         html = self._decode_body(body_bytes)
-                    if not html:
+                    if not html or len(html) < 500:
                         html = page.content()
 
                     page.close()
@@ -149,7 +164,10 @@ class NMPADrugNewsCrawler(BaseCrawler):
         if HAVE_PLAYWRIGHT:
             try:
                 with sync_playwright() as p:
-                    browser = p.chromium.launch(headless=True)
+                    browser = p.chromium.launch(
+                        headless=True,
+                        args=["--disable-blink-features=AutomationControlled", "--no-sandbox"],
+                    )
                     context = browser.new_context(
                         user_agent=(
                             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -166,40 +184,25 @@ class NMPADrugNewsCrawler(BaseCrawler):
                         ]
                         context.add_cookies(cookie_objs)
                     page = context.new_page()
-                    body_bytes: Optional[bytes] = None
-
-                    def _on_resp(resp):
-                        nonlocal body_bytes
-                        if body_bytes is None and resp.url.startswith(url):
-                            try:
-                                body_bytes = resp.body()
-                            except Exception:
-                                body_bytes = None
-
-                    page.on("response", _on_resp)
-                    home_resp = page.goto("https://www.nmpa.gov.cn/", wait_until="domcontentloaded", timeout=20000)
-                    if home_resp and home_resp.status != 200:
-                        self.logger.warning("Playwright 预热状态码 %s", home_resp.status)
-                    resp = page.goto(url, wait_until="domcontentloaded", timeout=20000)
-                    if resp and resp.status != 200:
-                        self.logger.warning("Playwright 目标状态码 %s", resp.status)
+                    # 预热：访问首页获取 cookie，等待足够时间
+                    page.goto("https://www.nmpa.gov.cn/", wait_until="domcontentloaded", timeout=30000)
+                    time.sleep(2)
+                    # 访问目标页
+                    page.goto(url, wait_until="domcontentloaded", timeout=30000)
                     try:
-                        page.wait_for_load_state("networkidle", timeout=8000)
+                        page.wait_for_load_state("networkidle", timeout=15000)
                     except Exception:
                         pass
+                    time.sleep(2)  # NMPA 需要额外等待 JS 渲染
                     if wait_selector:
                         try:
-                            page.wait_for_selector(wait_selector, timeout=3000)
+                            page.wait_for_selector(wait_selector, timeout=5000)
                         except Exception:
                             pass
-                    html = None
-                    if body_bytes:
-                        html = self._decode_body(body_bytes)
-                    if not html:
-                        html = page.content()
+                    html = page.content()
                     context.close()
                     browser.close()
-                    if html and len(html) > 200:
+                    if html and len(html) > 500:
                         return html
             except Exception as exc:  # pylint: disable=broad-except
                 self.logger.warning("Playwright 获取失败 url=%s err=%s", url, exc)

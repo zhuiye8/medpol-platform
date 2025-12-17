@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import pkgutil
+from dataclasses import dataclass, field
 from importlib import import_module
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime
@@ -17,6 +18,7 @@ from common.persistence.database import get_session_factory, session_scope
 from .config_loader import CrawlerRuntimeConfig, iter_configs
 from .dispatcher import FormatterPublisher, dispatch_results
 from .registry import registry
+from .base import CrawlStats
 
 
 logger = logging.getLogger("crawler.scheduler")
@@ -195,8 +197,9 @@ def run_crawler(crawler_name: str, config: Optional[Dict] = None) -> List[RawArt
     return articles
 
 
-def run_crawler_config(runtime_config: CrawlerRuntimeConfig) -> List[RawArticle]:
-    """根据来源配置运行爬虫。"""
+def run_crawler_config(runtime_config: CrawlerRuntimeConfig, session: Session | None = None) -> List[RawArticle]:
+    """根据来源配置运行爬虫，并更新代理状态。"""
+    from common.persistence.repository import SourceRepository
 
     crawler_config = {
         "source_id": runtime_config.source_id,
@@ -212,7 +215,126 @@ def run_crawler_config(runtime_config: CrawlerRuntimeConfig) -> List[RawArticle]
         runtime_config.crawler_name,
         len(articles),
     )
+
+    # 保存代理状态到 source meta
+    if session and runtime_config.source_id:
+        try:
+            proxy_status = crawler.get_proxy_status()
+            source_repo = SourceRepository(session)
+            source = source_repo.get_by_id(runtime_config.source_id)
+            if source:
+                meta = dict(source.meta or {})
+                meta["proxy_needed"] = proxy_status.get("proxy_needed")
+                meta["proxy_last_used"] = proxy_status.get("proxy_used")
+                source.meta = meta
+                session.flush()
+                logger.debug("更新代理状态: source=%s proxy_needed=%s", runtime_config.source_id, proxy_status.get("proxy_needed"))
+        except Exception as exc:
+            logger.warning("保存代理状态失败: %s", exc)
+
     return articles
+
+
+@dataclass
+class CrawlRunResult:
+    """爬虫运行结果，包含详细统计信息。"""
+
+    articles: List[RawArticle] = field(default_factory=list)  # 成功派发的文章
+    stats: CrawlStats = field(default_factory=CrawlStats)  # 统计信息
+    duplicates: int = 0  # 已存在的文章数量
+
+
+def run_crawler_config_with_stats(
+    runtime_config: CrawlerRuntimeConfig,
+    session: Session | None = None,
+) -> CrawlRunResult:
+    """运行爬虫并返回详细统计信息。"""
+    from common.persistence.repository import SourceRepository, ArticleRepository
+
+    result = CrawlRunResult()
+    stats = result.stats
+
+    crawler_config = {
+        "source_id": runtime_config.source_id,
+        "meta": runtime_config.meta,
+    }
+    crawler = registry.create(runtime_config.crawler_name, crawler_config)
+    setattr(crawler, "source_name", runtime_config.source_name)
+
+    # 捕获爬虫的日志输出以检测错误
+    # 我们通过检查爬虫日志 handler 来捕获警告/错误
+    crawler_errors: List[str] = []
+
+    class ErrorCaptureHandler(logging.Handler):
+        def emit(self, record):
+            if record.levelno >= logging.WARNING:
+                crawler_errors.append(record.getMessage())
+
+    error_handler = ErrorCaptureHandler()
+    crawler.logger.addHandler(error_handler)
+
+    # 执行爬虫
+    try:
+        crawl_results = crawler.run()
+        stats.total_fetched = len(crawl_results)
+    except Exception as exc:
+        stats.add_error(f"爬虫执行异常: {exc}")
+        crawl_results = []
+    finally:
+        crawler.logger.removeHandler(error_handler)
+
+    # 将捕获的错误添加到统计中
+    for err_msg in crawler_errors[:5]:  # 最多保留5条错误
+        stats.add_error(err_msg)
+
+    # 检查数据库中已存在的 URL
+    existing_urls: set[str] = set()
+    if session and crawl_results:
+        try:
+            article_repo = ArticleRepository(session)
+            urls = [r.source_url for r in crawl_results]
+            existing_urls = article_repo.get_existing_urls(urls)
+            result.duplicates = len(existing_urls)
+        except Exception as exc:
+            stats.add_error(f"检查重复URL失败: {exc}")
+
+    # 只派发不存在的文章
+    new_results = [r for r in crawl_results if r.source_url not in existing_urls]
+    stats.total_parsed = len(new_results)
+
+    # 派发文章
+    if new_results:
+        try:
+            result.articles = dispatch_results(crawler, new_results, publisher)
+        except Exception as exc:
+            stats.add_error(f"派发文章失败: {exc}")
+
+    logger.info(
+        "Source=%s Crawler=%s 爬取=%d 重复=%d 派发=%d 错误=%d",
+        runtime_config.source_name,
+        runtime_config.crawler_name,
+        stats.total_fetched,
+        result.duplicates,
+        len(result.articles),
+        len(stats.errors),
+    )
+
+    # 保存代理状态到 source meta
+    if session and runtime_config.source_id:
+        try:
+            proxy_status = crawler.get_proxy_status()
+            source_repo = SourceRepository(session)
+            source = source_repo.get_by_id(runtime_config.source_id)
+            if source:
+                meta = dict(source.meta or {})
+                meta["proxy_needed"] = proxy_status.get("proxy_needed")
+                meta["proxy_last_used"] = proxy_status.get("proxy_used")
+                source.meta = meta
+                session.flush()
+        except Exception as exc:
+            logger.warning("保存代理状态失败: %s", exc)
+
+    return result
 
 
 def _apply_quick_meta(meta: Dict) -> Dict:
@@ -292,7 +414,7 @@ def run_active_crawlers(
                 import time
 
                 start_ts = time.time()
-                articles = run_crawler_config(runtime_cfg)
+                articles = run_crawler_config(runtime_cfg, session=session)
                 duration_ms = int((time.time() - start_ts) * 1000)
                 detail_entry["finished_at"] = datetime.utcnow()
                 count = len(articles)

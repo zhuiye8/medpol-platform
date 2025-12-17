@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import os
 from datetime import datetime
-from pathlib import Path
 from typing import Dict, List
 from urllib.parse import urljoin
 
@@ -68,6 +66,7 @@ class CDEInstitutionCrawler(BaseCrawler):
     def _fetch_all_pages(self) -> List[Dict[str, str]]:
         """使用Playwright翻页采集所有需要的条目."""
         from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
+        from ..playwright_runner import _get_cdp_ws_url
 
         all_entries: List[Dict[str, str]] = []
         page_num = 1
@@ -75,34 +74,43 @@ class CDEInstitutionCrawler(BaseCrawler):
         self.logger.info("开始翻页采集，目标数量: %d", self.max_items)
 
         with sync_playwright() as p:
-            browser = p.chromium.launch(
-                headless=True,
-                args=[
-                    '--disable-blink-features=AutomationControlled',
-                    '--no-sandbox',
-                    '--disable-dev-shm-usage',
-                ]
-            )
-            page = browser.new_page(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                viewport={"width": 1920, "height": 1080}
-            )
-
-            # 移除webdriver标志
-            page.add_init_script("""
-                Object.defineProperty(navigator, 'webdriver', {
-                    get: () => undefined
-                });
-            """)
+            # 优先使用 CDP 连接到远程 Chrome
+            cdp_url = _get_cdp_ws_url()
+            if cdp_url:
+                self.logger.info("使用 CDP 连接: %s", cdp_url[:50])
+                browser = p.chromium.connect_over_cdp(cdp_url)
+                context = browser.contexts[0] if browser.contexts else browser.new_context()
+                page = context.new_page()
+            else:
+                # 回退到本地浏览器
+                self.logger.info("回退到本地浏览器")
+                browser = p.chromium.launch(
+                    headless=True,
+                    args=[
+                        '--disable-blink-features=AutomationControlled',
+                        '--no-sandbox',
+                        '--disable-dev-shm-usage',
+                    ]
+                )
+                page = browser.new_page(
+                    user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                    viewport={"width": 1920, "height": 1080}
+                )
+                # 移除webdriver标志
+                page.add_init_script("""
+                    Object.defineProperty(navigator, 'webdriver', {
+                        get: () => undefined
+                    });
+                """)
 
             try:
-                # 访问第一页（只等待 domcontentloaded，不等待 networkidle）
-                page.goto(self.list_url, wait_until="domcontentloaded", timeout=30000)
-                # 等待页面内容加载
-                page.wait_for_timeout(2000)
-                # 尝试等待选择器，但允许失败
+                # 访问第一页
+                page.goto(self.list_url, wait_until="domcontentloaded", timeout=120000)
+                # CDE 数据加载较慢，等待足够时间
+                page.wait_for_timeout(70000)
+                # 尝试等待选择器
                 try:
-                    page.wait_for_selector("div.news_item", timeout=5000)
+                    page.wait_for_selector("div.news_item", timeout=30000)
                 except:
                     self.logger.warning("等待 div.news_item 超时，继续尝试")
 
@@ -133,11 +141,10 @@ class CDEInstitutionCrawler(BaseCrawler):
                         self.logger.info("点击下一页...")
                         next_button.click()
 
-                        # 等待页面更新
-                        page.wait_for_timeout(2000)  # 等待2秒让页面加载
-                        # 尝试等待选择器，但允许失败
+                        # 等待页面更新（CDE 数据加载较慢）
+                        page.wait_for_timeout(10000)
                         try:
-                            page.wait_for_selector("div.news_item", timeout=5000)
+                            page.wait_for_selector("div.news_item", timeout=30000)
                         except:
                             self.logger.warning("翻页后等待选择器超时，继续")
 

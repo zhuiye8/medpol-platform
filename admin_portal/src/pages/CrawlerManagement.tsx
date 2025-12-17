@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useScheduler } from "@/hooks/useScheduler";
 import type { LogLine } from "@/types/api";
-import type { CrawlerJobItem, CrawlerJobRun, PipelineRunDetail, PipelineRunItem } from "@/types/scheduler";
+import type { CrawlerJobItem, CrawlerJobRun, PipelineRunDetail, PipelineRunItem, SourceProxyItem, ProxyMode } from "@/types/scheduler";
+import { fetchSourceProxyList, updateSourceProxyConfig } from "@/services/scheduler";
 
 type JobType = "scheduled" | "one_off";
 
@@ -57,10 +58,12 @@ function DetailTable({
   details,
   onRetry,
   onViewLog,
+  retryingDetails,
 }: {
   details: PipelineRunDetail[];
-  onRetry: (id: string) => void;
+  onRetry: (id: string, crawlerName: string) => void;
   onViewLog: (detail: PipelineRunDetail) => void;
+  retryingDetails?: Set<string>;
 }) {
   if (!details.length) return <div className="empty-state">暂无明细</div>;
   return (
@@ -78,38 +81,47 @@ function DetailTable({
         </tr>
       </thead>
       <tbody>
-        {details.map((d) => (
-          <tr key={`${d.id || d.crawler_name}-${d.attempt_number ?? ""}`}>
-            <td>{d.crawler_name}</td>
-            <td>{d.source_id || "-"}</td>
-            <td>
-              <StatusBadge status={d.status} />
-            </td>
-            <td>{d.result_count}</td>
-            <td>{d.duration_ms ?? "-"}</td>
-            <td>
-              {d.attempt_number ?? "-"} / {d.max_attempts ?? "-"}
-            </td>
-            <td>{d.error_type || "-"}</td>
-            <td className="table-actions">
-              <button
-                className="link-btn"
-                disabled={!d.id || !d.log_path}
-                onClick={() => onViewLog(d)}
-                title={!d.log_path ? "暂无日志" : "查看日志"}
-              >
-                查看日志
-              </button>
-              {d.status === "failed" && d.id ? (
-                <button onClick={() => onRetry(d.id!)} className="link-btn danger">
-                  异步重试
+        {details.map((d) => {
+          const isRetrying = retryingDetails?.has(d.id || "");
+          return (
+            <tr key={`${d.id || d.crawler_name}-${d.attempt_number ?? ""}`}>
+              <td>{d.crawler_name}</td>
+              <td>{d.source_id || "-"}</td>
+              <td>
+                {isRetrying ? (
+                  <span className="pill pill--info">重试中...</span>
+                ) : (
+                  <StatusBadge status={d.status} />
+                )}
+              </td>
+              <td>{d.result_count}</td>
+              <td>{d.duration_ms ?? "-"}</td>
+              <td>
+                {d.attempt_number ?? "-"} / {d.max_attempts ?? "-"}
+              </td>
+              <td>{d.error_type || "-"}</td>
+              <td className="table-actions">
+                <button
+                  className="link-btn"
+                  disabled={!d.id || !d.log_path}
+                  onClick={() => onViewLog(d)}
+                  title={!d.log_path ? "暂无日志" : "查看日志"}
+                >
+                  查看日志
                 </button>
-              ) : (
-                <span className="muted small">-</span>
-              )}
-            </td>
-          </tr>
-        ))}
+                {d.status === "failed" && d.id && !isRetrying ? (
+                  <button onClick={() => onRetry(d.id!, d.crawler_name)} className="link-btn danger">
+                    异步重试
+                  </button>
+                ) : isRetrying ? (
+                  <span className="muted small">重试中</span>
+                ) : (
+                  <span className="muted small">-</span>
+                )}
+              </td>
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   );
@@ -147,6 +159,42 @@ function LogModal({ state, onClose }: { state: LogModalState; onClose: () => voi
         </div>
       </div>
     </div>
+  );
+}
+
+function ProxyStatusBadge({ needed, lastUsed }: { needed?: boolean | null; lastUsed?: boolean | null }) {
+  if (needed === true) {
+    return <span className="pill pill--warn">需要代理</span>;
+  }
+  if (needed === false) {
+    return <span className="pill pill--ok">无需代理</span>;
+  }
+  if (lastUsed === true) {
+    return <span className="pill pill--info">已用代理</span>;
+  }
+  return <span className="pill">未知</span>;
+}
+
+function ProxyModeSelect({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: ProxyMode;
+  onChange: (mode: ProxyMode) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value as ProxyMode)}
+      disabled={disabled}
+      className="proxy-mode-select"
+    >
+      <option value="auto">自动</option>
+      <option value="always">始终使用</option>
+      <option value="never">从不使用</option>
+    </select>
   );
 }
 
@@ -191,6 +239,14 @@ export default function CrawlerManagementPage() {
     error: null,
   });
 
+  // 代理配置状态
+  const [proxyConfigs, setProxyConfigs] = useState<SourceProxyItem[]>([]);
+  const [proxyLoading, setProxyLoading] = useState(false);
+  const [proxyUpdating, setProxyUpdating] = useState<string | null>(null);
+
+  // 重试状态追踪
+  const [retryingDetails, setRetryingDetails] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     refresh();
   }, [refresh]);
@@ -198,6 +254,39 @@ export default function CrawlerManagementPage() {
   useEffect(() => {
     loadPipelineRuns({ limit: 20 }).then((data) => setPipelines(data.items));
   }, [loadPipelineRuns]);
+
+  // 加载代理配置
+  const loadProxyConfigs = useCallback(async () => {
+    setProxyLoading(true);
+    try {
+      const items = await fetchSourceProxyList();
+      setProxyConfigs(items);
+    } catch (err) {
+      console.error("加载代理配置失败:", err);
+    } finally {
+      setProxyLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadProxyConfigs();
+  }, [loadProxyConfigs]);
+
+  // 更新代理模式
+  const handleProxyModeChange = async (sourceId: string, mode: ProxyMode) => {
+    setProxyUpdating(sourceId);
+    try {
+      const updated = await updateSourceProxyConfig(sourceId, { proxy_mode: mode });
+      setProxyConfigs((prev) =>
+        prev.map((item) => (item.source_id === sourceId ? updated : item))
+      );
+    } catch (err) {
+      // eslint-disable-next-line no-alert
+      alert(err instanceof Error ? err.message : "更新代理配置失败");
+    } finally {
+      setProxyUpdating(null);
+    }
+  };
 
   useEffect(() => {
     if (!selectedJob) {
@@ -276,9 +365,49 @@ export default function CrawlerManagementPage() {
     });
   };
 
-  const handleRetryDetail = async (detailId: string) => {
+  const handleRetryDetail = async (detailId: string, crawlerName: string) => {
+    // 添加到重试中状态
+    setRetryingDetails((prev) => new Set(prev).add(detailId));
+
     await retryDetail(detailId);
-    await loadPipelineRuns({ limit: 20 }).then((data) => setPipelines(data.items));
+
+    // 开始轮询检查重试结果
+    const pollRetryStatus = async () => {
+      const maxPolls = 60; // 最多轮询60次（约5分钟）
+      for (let i = 0; i < maxPolls; i++) {
+        await new Promise((r) => setTimeout(r, 5000)); // 5秒一次
+        try {
+          const runs = await loadPipelineRuns({ run_type: "manual_retry", limit: 5 });
+          // 查找最新的与该爬虫相关的完成的重试
+          const latestRetry = runs.items.find(
+            (r) => r.finished_at && r.details?.some((d) => d.crawler_name === crawlerName)
+          );
+          if (latestRetry) {
+            // 找到完成的重试，移除轮询状态
+            setRetryingDetails((prev) => {
+              const next = new Set(prev);
+              next.delete(detailId);
+              return next;
+            });
+            // 刷新列表
+            await loadPipelineRuns({ limit: 20 }).then((data) => setPipelines(data.items));
+            return;
+          }
+        } catch {
+          // 轮询出错，继续
+        }
+      }
+      // 超时，移除状态
+      setRetryingDetails((prev) => {
+        const next = new Set(prev);
+        next.delete(detailId);
+        return next;
+      });
+      await loadPipelineRuns({ limit: 20 }).then((data) => setPipelines(data.items));
+    };
+
+    // 后台轮询，不阻塞UI
+    pollRetryStatus();
   };
 
   const showLog = async (
@@ -416,7 +545,7 @@ export default function CrawlerManagementPage() {
         {pipelineError && <div className="error">{pipelineError}</div>}
         <div>
           <h4 className="section-title">最近一次运行明细</h4>
-          <DetailTable details={lastPipelineDetails} onRetry={handleRetryDetail} onViewLog={handleViewPipelineLog} />
+          <DetailTable details={lastPipelineDetails} onRetry={handleRetryDetail} onViewLog={handleViewPipelineLog} retryingDetails={retryingDetails} />
         </div>
       </section>
 
@@ -668,9 +797,59 @@ export default function CrawlerManagementPage() {
           (p) =>
             expandedRuns.has(p.id) && (
               <div key={`${p.id}-details`} style={{ marginTop: 8 }}>
-                <DetailTable details={p.details} onRetry={handleRetryDetail} onViewLog={handleViewPipelineLog} />
+                <DetailTable details={p.details} onRetry={handleRetryDetail} onViewLog={handleViewPipelineLog} retryingDetails={retryingDetails} />
               </div>
             )
+        )}
+      </section>
+
+      <section className="panel">
+        <div className="panel__header">
+          <div>
+            <h3>代理配置</h3>
+            <p className="muted small">
+              管理爬虫的代理模式。auto=超时自动切换，always=始终使用代理，never=从不使用代理。
+            </p>
+          </div>
+          <button className="ghost" onClick={loadProxyConfigs} disabled={proxyLoading}>
+            {proxyLoading ? "加载中..." : "刷新"}
+          </button>
+        </div>
+        {proxyLoading ? (
+          <div>加载中...</div>
+        ) : proxyConfigs.length === 0 ? (
+          <div className="empty-state">暂无来源配置</div>
+        ) : (
+          <table className="list-table">
+            <thead>
+              <tr>
+                <th>来源名称</th>
+                <th>爬虫</th>
+                <th>代理模式</th>
+                <th>代理状态</th>
+                <th>自定义代理</th>
+              </tr>
+            </thead>
+            <tbody>
+              {proxyConfigs.map((item) => (
+                <tr key={item.source_id}>
+                  <td>{item.source_name}</td>
+                  <td>{item.crawler_name || "-"}</td>
+                  <td>
+                    <ProxyModeSelect
+                      value={item.proxy_mode}
+                      onChange={(mode) => handleProxyModeChange(item.source_id, mode)}
+                      disabled={proxyUpdating === item.source_id}
+                    />
+                  </td>
+                  <td>
+                    <ProxyStatusBadge needed={item.proxy_needed} lastUsed={item.proxy_last_used} />
+                  </td>
+                  <td>{item.proxy_url || <span className="muted">默认</span>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </section>
 

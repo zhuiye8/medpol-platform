@@ -29,6 +29,10 @@ class SourceRepository:
         stmt = select(models.SourceORM).where(models.SourceORM.is_active.is_(True))
         return list(self.session.scalars(stmt))
 
+    def list_all(self) -> List[models.SourceORM]:
+        stmt = select(models.SourceORM).order_by(models.SourceORM.name)
+        return list(self.session.scalars(stmt))
+
     def add(self, source: models.SourceORM) -> None:
         self.session.add(source)
 
@@ -46,14 +50,21 @@ class SourceRepository:
         label: str,
         base_url: str | None = None,
     ) -> models.SourceORM:
+        # 先通过 ID 查找
+        expected_id = f"src_{crawler_name}"
+        existing = self.get_by_id(expected_id)
+        if existing:
+            return existing
+        # 再通过 meta.crawler_name 查找
         existing = self.get_by_crawler_name(crawler_name)
         if existing:
             return existing
+        # 都没找到，创建新的
         source = models.SourceORM(
-            id=f"src_{crawler_name}",
+            id=expected_id,
             name=f"{label}",
             label=label,
-            base_url=base_url or f"https://{crawler_name}.example.com",
+            base_url=base_url if base_url is not None else f"https://{crawler_name}.example.com",
             category=category,
             is_active=True,
             meta={"crawler_name": crawler_name},
@@ -228,6 +239,15 @@ class ArticleRepository:
         article = self.get_by_id(article_id)
         if article:
             article.summary = summary
+
+    def get_existing_urls(self, urls: List[str]) -> set[str]:
+        """批量检查哪些 source_url 已存在于数据库中。"""
+        if not urls:
+            return set()
+        stmt = select(models.ArticleORM.source_url).where(
+            models.ArticleORM.source_url.in_(urls)
+        )
+        return set(self.session.scalars(stmt))
 
 
 class AIResultRepository:

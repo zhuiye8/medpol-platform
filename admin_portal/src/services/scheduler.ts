@@ -8,6 +8,9 @@ import type {
   PipelineRunList,
   CeleryHealth,
   ResetResult,
+  SourceProxyItem,
+  SourceProxyListData,
+  UpdateProxyConfigRequest,
 } from "@/types/scheduler";
 import { apiRequest } from "./api";
 
@@ -123,5 +126,32 @@ export async function fetchCeleryHealth(): Promise<CeleryHealth> {
 
 export async function resetPipelineData(): Promise<ResetResult> {
   const resp = await apiRequest<ResetResponse>("/v1/pipeline/reset", { method: "POST" });
+  return resp.data;
+}
+
+// -------- 代理配置 API --------
+
+interface SourceProxyListResponse extends Envelope<SourceProxyListData> {}
+interface SourceProxyItemResponse extends Envelope<SourceProxyItem> {}
+
+export async function fetchSourceProxyList(): Promise<SourceProxyItem[]> {
+  const resp = await apiRequest<SourceProxyListResponse>("/v1/sources/proxy");
+  return resp.data.items;
+}
+
+export async function fetchSourceProxyConfig(sourceId: string): Promise<SourceProxyItem> {
+  const resp = await apiRequest<SourceProxyItemResponse>(`/v1/sources/${sourceId}/proxy`);
+  return resp.data;
+}
+
+export async function updateSourceProxyConfig(
+  sourceId: string,
+  data: UpdateProxyConfigRequest
+): Promise<SourceProxyItem> {
+  const resp = await apiRequest<SourceProxyItemResponse>(`/v1/sources/${sourceId}/proxy`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
   return resp.data;
 }

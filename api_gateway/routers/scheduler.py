@@ -39,6 +39,9 @@ from ..schemas import (
     ResetResultData,
     LogListData,
     LogLine,
+    SourceProxyItem,
+    SourceProxyListData,
+    UpdateProxyConfigRequest,
 )
 from scheduler_service.job_runner import (
     calculate_next_run,
@@ -206,6 +209,7 @@ def create_crawler_job(
     _validate_job_payload(job_data)
     source_repo = SourceRepository(db)
     source_id = job_data.source_id
+
     crawler_cls = crawler_registry.available().get(job_data.crawler_name)
     category = getattr(crawler_cls, "category", ArticleCategory.FRONTIER)
     label = getattr(crawler_cls, "label", job_data.crawler_name)
@@ -675,3 +679,79 @@ def reset_pipeline() -> Envelope[ResetResultData]:
         redis_cleared=result.redis_cleared,
     )
     return Envelope(code=0, msg="success", data=data)
+
+
+# -------- 代理配置 API --------
+
+@router.get("/sources/proxy", response_model=Envelope[SourceProxyListData])
+def list_source_proxy_configs(db: Session = Depends(get_db_session)) -> Envelope[SourceProxyListData]:
+    """获取所有来源的代理配置状态。"""
+    source_repo = SourceRepository(db)
+    sources = source_repo.list_all()
+    items = []
+    for source in sources:
+        meta = source.meta or {}
+        items.append(SourceProxyItem(
+            source_id=source.id,
+            source_name=source.name,
+            crawler_name=source.name.replace("src_", ""),
+            proxy_mode=meta.get("proxy_mode", "auto"),
+            proxy_url=meta.get("proxy_url"),
+            proxy_needed=meta.get("proxy_needed"),
+            proxy_last_used=meta.get("proxy_last_used"),
+        ))
+    return Envelope(code=0, msg="success", data=SourceProxyListData(items=items))
+
+
+@router.get("/sources/{source_id}/proxy", response_model=Envelope[SourceProxyItem])
+def get_source_proxy_config(source_id: str, db: Session = Depends(get_db_session)) -> Envelope[SourceProxyItem]:
+    """获取指定来源的代理配置。"""
+    source_repo = SourceRepository(db)
+    source = source_repo.get_by_id(source_id)
+    if not source:
+        raise HTTPException(status_code=404, detail="来源不存在")
+    meta = source.meta or {}
+    item = SourceProxyItem(
+        source_id=source.id,
+        source_name=source.name,
+        crawler_name=source.name.replace("src_", ""),
+        proxy_mode=meta.get("proxy_mode", "auto"),
+        proxy_url=meta.get("proxy_url"),
+        proxy_needed=meta.get("proxy_needed"),
+        proxy_last_used=meta.get("proxy_last_used"),
+    )
+    return Envelope(code=0, msg="success", data=item)
+
+
+@router.patch("/sources/{source_id}/proxy", response_model=Envelope[SourceProxyItem])
+def update_source_proxy_config(
+    source_id: str,
+    request: UpdateProxyConfigRequest,
+    db: Session = Depends(get_db_session)
+) -> Envelope[SourceProxyItem]:
+    """更新指定来源的代理配置。"""
+    source_repo = SourceRepository(db)
+    source = source_repo.get_by_id(source_id)
+    if not source:
+        raise HTTPException(status_code=404, detail="来源不存在")
+
+    meta = dict(source.meta or {})
+    if request.proxy_mode is not None:
+        meta["proxy_mode"] = request.proxy_mode
+    if request.proxy_url is not None:
+        meta["proxy_url"] = request.proxy_url
+
+    source.meta = meta
+    db.commit()
+    db.refresh(source)
+
+    item = SourceProxyItem(
+        source_id=source.id,
+        source_name=source.name,
+        crawler_name=source.name.replace("src_", ""),
+        proxy_mode=meta.get("proxy_mode", "auto"),
+        proxy_url=meta.get("proxy_url"),
+        proxy_needed=meta.get("proxy_needed"),
+        proxy_last_used=meta.get("proxy_last_used"),
+    )
+    return Envelope(code=0, msg="success", data=item)
