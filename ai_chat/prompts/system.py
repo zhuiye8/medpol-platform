@@ -6,6 +6,8 @@ from __future__ import annotations
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from ai_chat.prompts.company_info import GROUP_INTRO, build_company_context
+
 
 # 指标类型完整映射
 TYPE_NO_MAPPING = {
@@ -115,10 +117,16 @@ def build_system_prompt(persona: str | None = None, mode: str = "rag") -> str:
         ),
     }.get(mode, "")
 
+    # 构建公司信息上下文（所有模式通用）
+    company_context = build_company_context()
+
     return (
         f"【当前时间】北京时间：{time_str}（{current_year}年）。\n"
-        f'【重要】用户说"今年/当年/本年"指的是{current_year}年，"去年"指{current_year-1}年。\n'
-        "你是医药政策与财务分析助理，回答需准确、简洁、中文输出，避免无依据的编造。\n"
+        f"【身份】你是联环集团的专属AI助手，负责医药政策与财务分析。回答需准确、简洁、中文输出，避免无依据的编造。\n"
+        f'【重要】用户说"我们"、"我们集团"、"我们公司"、"集团"时，指的就是联环集团。\n'
+        f'用户说"今年/当年/本年"指的是{current_year}年，"去年"指{current_year-1}年。\n'
+        f"【联环集团简介】\n{GROUP_INTRO}\n"
+        f"{company_context}\n"
         f"{mode_hint}\n"
         f"Persona={persona_key}。"
     )

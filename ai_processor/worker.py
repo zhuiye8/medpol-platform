@@ -24,6 +24,7 @@ from common.persistence.repository import AIResultRepository, ArticleRepository
 from common.utils.config import get_settings
 from common.utils.env import load_env
 from formatter_service.language import detect_language
+from ai_chat.prompts.company_info import GROUP_INTRO
 
 load_env()
 logger = logging.getLogger("ai_processor.worker")
@@ -48,11 +49,8 @@ if os.getenv("DATABASE_URL"):
         print(f"[ai_processor] init session factory failed: {exc}")
         SESSION_FACTORY = None
 
-_JIESHAO = ""
-try:
-    _JIESHAO = Path("jieshao.md").read_text(encoding="utf-8", errors="ignore")
-except Exception:
-    _JIESHAO = ""
+# 集团简介统一从 company_info.py 获取
+_JIESHAO = GROUP_INTRO
 
 POLICY_CATEGORIES = {
     ArticleCategory.FDA_POLICY,
