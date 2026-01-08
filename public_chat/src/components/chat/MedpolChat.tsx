@@ -93,8 +93,13 @@ export function MedpolChat({
 
   // 挂载时加载初始消息
   useEffect(() => {
-    if (!isInitialized.current && initialMessages && initialMessages.length > 0) {
-      loadMessages(initialMessages, initialConversationId || null);
+    if (!isInitialized.current) {
+      // 有初始消息时加载
+      if (initialMessages && initialMessages.length > 0) {
+        loadMessages(initialMessages, initialConversationId || null);
+      }
+      // 无论是否有初始消息，都标记为已初始化
+      // 这样新对话的消息变化也能触发 onMessagesChange
       isInitialized.current = true;
     }
   }, [initialMessages, initialConversationId, loadMessages]);
