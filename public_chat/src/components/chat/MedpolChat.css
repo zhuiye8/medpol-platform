@@ -396,7 +396,7 @@
   display: flex;
   align-items: center;
   width: 100%;
-  max-width: 768px;
+  max-width: clamp(400px, 65%, 900px);
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: 26px;
@@ -1164,6 +1164,202 @@
   margin: 1.5em 0;
   border: none;
   border-top: 1px solid var(--border-color);
+}
+
+/* ======================== Responsive ======================== */
+
+/* 超大屏幕 (4K: 2560px+) */
+@media (min-width: 2560px) {
+  .medpol-chat__welcome-title {
+    font-size: 42px;
+  }
+
+  .medpol-chat__welcome-subtitle {
+    font-size: 20px;
+  }
+
+  .medpol-chat__input-wrapper {
+    max-width: 1000px;
+    padding: 8px 12px;
+  }
+
+  .medpol-chat__input {
+    font-size: 17px;
+    padding: 12px 14px;
+  }
+
+  .medpol-chat__btn-circle {
+    width: 42px;
+    height: 42px;
+    font-size: 20px;
+  }
+
+  .medpol-chat__bubble {
+    font-size: 17px;
+    max-width: 85%;
+  }
+
+  .medpol-chat__example-btn {
+    padding: 14px 22px;
+    font-size: 16px;
+  }
+}
+
+/* 大屏幕 (1920px - 2559px) */
+@media (min-width: 1920px) and (max-width: 2559px) {
+  .medpol-chat__welcome-title {
+    font-size: 38px;
+  }
+
+  .medpol-chat__input-wrapper {
+    max-width: 850px;
+  }
+
+  .medpol-chat__bubble {
+    max-width: 80%;
+  }
+}
+
+/* 中大屏幕 (1440px - 1919px) */
+@media (min-width: 1440px) and (max-width: 1919px) {
+  .medpol-chat__welcome-title {
+    font-size: 34px;
+  }
+
+  .medpol-chat__input-wrapper {
+    max-width: 780px;
+  }
+
+  .medpol-chat__bubble {
+    max-width: 75%;
+  }
+}
+
+/* 中等屏幕 (1024px - 1439px) */
+@media (min-width: 1024px) and (max-width: 1439px) {
+  .medpol-chat__welcome-title {
+    font-size: 30px;
+  }
+
+  .medpol-chat__welcome-subtitle {
+    font-size: 16px;
+  }
+
+  .medpol-chat__input-wrapper {
+    max-width: 680px;
+  }
+
+  .medpol-chat__bubble {
+    max-width: 80%;
+  }
+
+  .medpol-chat__example-btn {
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+}
+
+/* 小屏幕 (769px - 1023px) */
+@media (min-width: 769px) and (max-width: 1023px) {
+  .medpol-chat__welcome-title {
+    font-size: 26px;
+  }
+
+  .medpol-chat__welcome-subtitle {
+    font-size: 15px;
+  }
+
+  .medpol-chat__input-area {
+    padding: 12px 16px 20px;
+  }
+
+  .medpol-chat__input-wrapper {
+    max-width: 90%;
+  }
+
+  .medpol-chat__bubble {
+    max-width: 85%;
+  }
+
+  .medpol-chat__examples {
+    gap: 8px;
+  }
+
+  .medpol-chat__example-btn {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+}
+
+/* 移动端 (768px 及以下) */
+@media (max-width: 768px) {
+  .medpol-chat__welcome-center {
+    padding: 40px 16px;
+  }
+
+  .medpol-chat__welcome-title {
+    font-size: 22px;
+  }
+
+  .medpol-chat__welcome-subtitle {
+    font-size: 14px;
+  }
+
+  .medpol-chat__input-area {
+    padding: 10px 12px 16px;
+  }
+
+  .medpol-chat__input-wrapper {
+    max-width: 100%;
+    border-radius: 22px;
+    padding: 4px 6px;
+  }
+
+  .medpol-chat__input {
+    font-size: 14px;
+    padding: 8px 10px;
+  }
+
+  .medpol-chat__btn-circle {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+
+  .medpol-chat__font-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .medpol-chat__bubble {
+    max-width: 90%;
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+
+  .medpol-chat__avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+
+  .medpol-chat__examples {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .medpol-chat__example-btn {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+
+  .medpol-chat__messages {
+    padding: 12px;
+  }
+
+  .medpol-chat__message {
+    gap: 8px;
+  }
 }
 
 /* ======================== Accessibility ======================== */

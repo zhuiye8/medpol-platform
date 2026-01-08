@@ -8,6 +8,7 @@
  * - 仅支持知识库问答模式
  */
 import { useCallback, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { MedpolChat } from "@/components/chat";
 import { Sidebar } from "@/components/Sidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -18,6 +19,10 @@ import type { ChatMessage } from "@/components/chat/types";
 export function ChatPage() {
   // 初始化主题
   useTheme();
+
+  // 读取 URL 参数控制侧边栏显示（用于 iframe 嵌入）
+  const [searchParams] = useSearchParams();
+  const showSidebar = searchParams.get("sidebar") !== "false";
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
@@ -61,24 +66,27 @@ export function ChatPage() {
   );
 
   return (
-    <div className="chat-page">
-      {/* 侧边栏 */}
-      <Sidebar
-        conversations={conversations}
-        activeConversationId={activeConversationId}
-        onNewChat={handleNewChat}
-        onSelectConversation={handleSelectConversation}
-        onDeleteConversation={handleDeleteConversation}
-        isCollapsed={sidebarCollapsed}
-        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-      />
+    <div className={`chat-page ${!showSidebar ? "chat-page--no-sidebar" : ""}`}>
+      {/* 侧边栏 - 可通过 URL 参数 sidebar=false 隐藏 */}
+      {showSidebar && (
+        <Sidebar
+          conversations={conversations}
+          activeConversationId={activeConversationId}
+          onNewChat={handleNewChat}
+          onSelectConversation={handleSelectConversation}
+          onDeleteConversation={handleDeleteConversation}
+          isCollapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        />
+      )}
 
       {/* 主内容区 */}
       <main className="chat-page__main">
         {/* 顶部栏 */}
         <header className="chat-page__header">
           <div className="chat-page__header-left">
-            {sidebarCollapsed && (
+            {/* 仅当侧边栏启用且收起时显示菜单按钮 */}
+            {showSidebar && sidebarCollapsed && (
               <button
                 className="chat-page__menu-btn"
                 onClick={() => setSidebarCollapsed(false)}

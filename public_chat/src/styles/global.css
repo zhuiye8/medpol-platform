@@ -109,8 +109,8 @@ body {
 
 /* ======================== Sidebar ======================== */
 .sidebar {
-  width: 280px;
-  min-width: 280px;
+  width: clamp(240px, 20vw, 320px);
+  min-width: 240px;
   height: 100%;
   background: var(--bg-primary);
   border-right: 1px solid var(--border-color);
@@ -440,12 +440,88 @@ body {
 }
 
 /* ======================== Responsive ======================== */
+
+/* 超大屏幕 (4K: 2560px+) */
+@media (min-width: 2560px) {
+  .sidebar {
+    width: 320px;
+    min-width: 320px;
+  }
+
+  .chat-page__header {
+    padding: 0 48px;
+  }
+
+  .chat-page__title {
+    font-size: 20px;
+  }
+}
+
+/* 大屏幕 (1920px - 2559px) */
+@media (min-width: 1920px) and (max-width: 2559px) {
+  .sidebar {
+    width: 300px;
+    min-width: 300px;
+  }
+
+  .chat-page__header {
+    padding: 0 36px;
+  }
+}
+
+/* 中大屏幕 (1440px - 1919px) */
+@media (min-width: 1440px) and (max-width: 1919px) {
+  .sidebar {
+    width: 280px;
+    min-width: 280px;
+  }
+}
+
+/* 中等屏幕 (1024px - 1439px) */
+@media (min-width: 1024px) and (max-width: 1439px) {
+  .sidebar {
+    width: 260px;
+    min-width: 260px;
+  }
+
+  .chat-page__header {
+    padding: 0 20px;
+  }
+
+  .chat-page__title {
+    font-size: 16px;
+  }
+}
+
+/* 小屏幕 (769px - 1023px) */
+@media (min-width: 769px) and (max-width: 1023px) {
+  .sidebar {
+    width: 240px;
+    min-width: 240px;
+  }
+
+  .chat-page__header {
+    padding: 0 16px;
+  }
+
+  .chat-page__title {
+    font-size: 15px;
+  }
+
+  .sidebar__logo-text {
+    font-size: 15px;
+  }
+}
+
+/* 移动端 (768px 及以下) */
 @media (max-width: 768px) {
   .sidebar {
     position: fixed;
     left: 0;
     top: 0;
     z-index: 100;
+    width: 280px;
+    min-width: 280px;
     transform: translateX(-100%);
     transition: transform var(--transition-normal);
     box-shadow: var(--shadow-xl);
@@ -456,11 +532,20 @@ body {
   }
 
   .chat-page__container {
-    padding: 16px;
+    padding: 8px;
+  }
+
+  .chat-page__header {
+    height: 56px;
+    padding: 0 12px;
+  }
+
+  .chat-page__title {
+    font-size: 14px;
   }
 
   .chat-page__chat-wrapper {
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-md);
   }
 }
 

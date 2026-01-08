@@ -61,6 +61,7 @@ export function useAuth() {
   return {
     isAuthenticated,
     verify,
+    verifyToken: verify,  // URL token 认证（与 verify 相同逻辑）
     logout,
   };
 }
