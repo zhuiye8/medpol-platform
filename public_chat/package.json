@@ -1,0 +1,34 @@
+{
+  "name": "medpol-public-chat",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@llm-ui/markdown": "^0.13.3",
+    "@llm-ui/react": "^0.13.3",
+    "dayjs": "^1.11.11",
+    "plotly.js": "^3.3.0",
+    "plotly.js-basic-dist-min": "^3.3.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^9.0.1",
+    "react-plotly.js": "^2.6.0",
+    "react-router-dom": "^6.23.0",
+    "remark-gfm": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.66",
+    "@types/react-dom": "^18.2.22",
+    "@types/react-plotly.js": "^2.6.3",
+    "@vitejs/plugin-react": "^4.3.1",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.10",
+    "vite-plugin-node-polyfills": "^0.24.0"
+  },
+  "packageManager": "pnpm@9.1.0"
+}

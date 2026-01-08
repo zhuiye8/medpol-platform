@@ -10,6 +10,8 @@ __pycache__/
 node_modules/
 admin_portal/node_modules/
 admin_portal/dist/
+public_chat/node_modules/
+public_chat/dist/
 
 playwright/.cache/
 
@@ -17,3 +19,11 @@ playwright/.cache/
 .claude/
 vanna_outputs/
 nmpa-profile/
+
+# Local scripts
+ssh_tunnel_*.ps1
+
+# Temp files
+*.png
+*.jpg
+*.jpeg

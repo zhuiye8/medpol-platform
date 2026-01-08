@@ -124,7 +124,7 @@
 | `DATABASE_URL` | SQLAlchemy DSN，供 API 查询与脚本使用 |
 | `REDIS_URL` | 缓存/队列地址（当前用于 outbox 与调度） |
 | `LOG_FILE_PATH` | `/v1/admin/logs` 查看的日志路径 |
-| `VITE_API_BASE_URL` | Admin Portal 请求 API 的基础地址 |
+| `VITE_API_BASE` | Admin Portal / Public Chat 请求 API 的基础地址 |
 | `ADMIN_PORTAL_ORIGINS` | 允许跨域的前端地址，逗号分隔 |
 
 ## 下一阶段公开接口规划

@@ -69,7 +69,7 @@ python -m pytest
 
 - 公共接口详见 `docs/PUBLIC_API.md`，新增字段需同步文档与 `admin_portal`。
 - FastAPI CORS 默认 `allow_origins=["*"]`，若要限制请设置 `ADMIN_PORTAL_ORIGINS`。
-- Admin Portal 读取父级 `.env` 中的 `VITE_API_BASE_URL`、`LOG_FILE_PATH`。
+- Admin Portal 读取父级 `.env` 中的 `VITE_API_BASE`、`LOG_FILE_PATH`。
 
 ## 7. 数据迁移
 
