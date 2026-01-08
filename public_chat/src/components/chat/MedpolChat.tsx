@@ -94,9 +94,11 @@ export function MedpolChat({
   // 挂载时加载初始消息
   useEffect(() => {
     if (!isInitialized.current) {
-      // 有初始消息时加载
-      if (initialMessages && initialMessages.length > 0) {
-        loadMessages(initialMessages, initialConversationId || null);
+      if (initialConversationId) {
+        // 即使没有历史消息，也要设置会话 ID，避免发送时生成新 ID
+        loadMessages(initialMessages || [], initialConversationId);
+      } else if (initialMessages && initialMessages.length > 0) {
+        loadMessages(initialMessages, null);
       }
       // 无论是否有初始消息，都标记为已初始化
       // 这样新对话的消息变化也能触发 onMessagesChange
@@ -106,10 +108,10 @@ export function MedpolChat({
 
   // 通知父组件消息变化
   useEffect(() => {
-    if (isInitialized.current) {
+    if (isInitialized.current && !isStreaming) {
       onMessagesChange?.(messages, conversationId);
     }
-  }, [messages, conversationId, onMessagesChange]);
+  }, [messages, conversationId, onMessagesChange, isStreaming]);
 
   // 新消息到达时自动滚动到底部
   useEffect(() => {

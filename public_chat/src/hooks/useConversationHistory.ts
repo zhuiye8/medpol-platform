@@ -124,10 +124,12 @@ export function useConversationHistory() {
   // 更新当前对话的消息
   const updateMessages = useCallback(
     (messages: ChatMessage[], conversationId: string | null) => {
-      if (!conversationId && messages.length === 0) return;
-
       setHistory((prev) => {
         let convId = conversationId || prev.activeConversationId;
+
+        if (!convId && messages.length === 0) {
+          return prev;
+        }
 
         // 如果没有活动对话但有消息，则创建新对话
         if (!convId && messages.length > 0) {
@@ -148,6 +150,29 @@ export function useConversationHistory() {
           };
         }
 
+        const exists = convId
+          ? prev.conversations.some((conv) => conv.id === convId)
+          : false;
+
+        // 如果传入了会话 ID 但不存在，则创建新对话
+        if (convId && !exists && messages.length > 0) {
+          const newConv: Conversation = {
+            id: convId,
+            title: generateTitle(messages),
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            messages,
+          };
+          let conversations = [newConv, ...prev.conversations];
+          if (conversations.length > MAX_CONVERSATIONS) {
+            conversations = conversations.slice(0, MAX_CONVERSATIONS);
+          }
+          return {
+            conversations,
+            activeConversationId: convId,
+          };
+        }
+
         // 更新现有对话
         const conversations = prev.conversations.map((conv) => {
           if (conv.id === convId) {
@@ -160,9 +185,6 @@ export function useConversationHistory() {
           }
           return conv;
         });
-
-        // 按更新时间排序（最新的在前）
-        conversations.sort((a, b) => b.updatedAt - a.updatedAt);
 
         return {
           ...prev,
