@@ -119,23 +119,20 @@ body {
   transition: width var(--transition-normal), min-width var(--transition-normal);
 }
 
-.sidebar--collapsed {
-  width: 64px;
-  min-width: 64px;
-}
-
 .sidebar__header {
   padding: 16px;
   border-bottom: 1px solid var(--border-color);
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 12px;
-  flex-wrap: wrap;
 }
 
-.sidebar--collapsed .sidebar__header {
-  justify-content: center;
-  padding: 16px 12px;
+.sidebar__brand-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
 }
 
 .sidebar__logo {
@@ -143,18 +140,31 @@ body {
   align-items: center;
   gap: 10px;
   flex: 1;
+  min-width: 0;
 }
 
 .sidebar__logo-icon {
-  font-size: 24px;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  background: var(--accent-light);
+  border-radius: 10px;
+  box-shadow: var(--shadow-xs);
 }
 
 .sidebar__logo-text {
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
-  letter-spacing: -0.3px;
+  letter-spacing: -0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+
 
 .sidebar__new-chat {
   display: flex;
@@ -169,6 +179,11 @@ body {
   font-weight: 400;
   cursor: pointer;
   transition: all 0.15s ease;
+}
+
+.sidebar__new-chat--full {
+  width: 100%;
+  justify-content: flex-start;
 }
 
 .sidebar__new-chat:hover {
@@ -192,6 +207,10 @@ body {
   cursor: pointer;
   color: var(--text-secondary);
   transition: all var(--transition-fast);
+}
+
+.sidebar__brand-row .sidebar__toggle {
+  margin-left: auto;
 }
 
 .sidebar__toggle:hover {
@@ -522,13 +541,9 @@ body {
     z-index: 100;
     width: 280px;
     min-width: 280px;
-    transform: translateX(-100%);
+    transform: translateX(0);
     transition: transform var(--transition-normal);
     box-shadow: var(--shadow-xl);
-  }
-
-  .sidebar:not(.sidebar--collapsed) {
-    transform: translateX(0);
   }
 
   .chat-page__container {

@@ -100,7 +100,7 @@ export function AuthPage() {
         </div>
 
         {/* 标题 */}
-        <h1 className="auth-card__title">医药政策助手</h1>
+        <h1 className="auth-card__title">数智联环平台</h1>
         <p className="auth-card__subtitle">
           基于知识库的智能政策问答系统
         </p>

@@ -68,15 +68,14 @@ export function ChatPage() {
   return (
     <div className={`chat-page ${!showSidebar ? "chat-page--no-sidebar" : ""}`}>
       {/* 侧边栏 - 可通过 URL 参数 sidebar=false 隐藏 */}
-      {showSidebar && (
+      {showSidebar && !sidebarCollapsed && (
         <Sidebar
           conversations={conversations}
           activeConversationId={activeConversationId}
           onNewChat={handleNewChat}
           onSelectConversation={handleSelectConversation}
           onDeleteConversation={handleDeleteConversation}
-          isCollapsed={sidebarCollapsed}
-          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+          onToggleCollapse={() => setSidebarCollapsed(true)}
         />
       )}
 

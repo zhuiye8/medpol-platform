@@ -10,7 +10,6 @@ interface SidebarProps {
   onNewChat: () => void;
   onSelectConversation: (id: string) => void;
   onDeleteConversation: (id: string) => void;
-  isCollapsed: boolean;
   onToggleCollapse: () => void;
 }
 
@@ -20,91 +19,83 @@ export function Sidebar({
   onNewChat,
   onSelectConversation,
   onDeleteConversation,
-  isCollapsed,
   onToggleCollapse,
 }: SidebarProps) {
   return (
-    <aside className={`sidebar ${isCollapsed ? "sidebar--collapsed" : ""}`}>
+    <aside className="sidebar">
       {/* Header */}
       <div className="sidebar__header">
-        {!isCollapsed && (
-          <>
-            <div className="sidebar__logo">
-              <span className="sidebar__logo-icon">🏢</span>
-              <span className="sidebar__logo-text">联环集团</span>
-            </div>
-            <button className="sidebar__new-chat" onClick={onNewChat}>
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-              <span>新对话</span>
-            </button>
-          </>
-        )}
+        <div className="sidebar__brand-row">
+          <div className="sidebar__logo">
+            <span className="sidebar__logo-icon">🏢</span>
+            <span className="sidebar__logo-text">数智联环平台</span>
+          </div>
+          <button
+            className="sidebar__toggle"
+            onClick={onToggleCollapse}
+            title="收起侧边栏"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </button>
+        </div>
         <button
-          className="sidebar__toggle"
-          onClick={onToggleCollapse}
-          title={isCollapsed ? "展开侧边栏" : "收起侧边栏"}
+          className="sidebar__new-chat sidebar__new-chat--full"
+          onClick={onNewChat}
         >
           <svg
-            width="18"
-            height="18"
+            width="16"
+            height="16"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            style={{
-              transform: isCollapsed ? "rotate(180deg)" : "rotate(0deg)",
-              transition: "transform 0.2s ease",
-            }}
           >
-            <path d="M15 18l-6-6 6-6" />
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
+          <span>新对话</span>
         </button>
       </div>
 
       {/* Conversation List */}
-      {!isCollapsed && (
-        <div className="sidebar__list">
-          {conversations.length === 0 ? (
-            <div className="sidebar__empty">
-              <p>暂无历史对话</p>
-              <p className="sidebar__empty-hint">点击「新对话」开始</p>
-            </div>
-          ) : (
-            conversations.map((conv) => (
-              <ConversationItem
-                key={conv.id}
-                conversation={conv}
-                isActive={conv.id === activeConversationId}
-                onSelect={() => onSelectConversation(conv.id)}
-                onDelete={() => onDeleteConversation(conv.id)}
-              />
-            ))
-          )}
-        </div>
-      )}
+      <div className="sidebar__list">
+        {conversations.length === 0 ? (
+          <div className="sidebar__empty">
+            <p>暂无历史对话</p>
+            <p className="sidebar__empty-hint">点击「新对话」开始</p>
+          </div>
+        ) : (
+          conversations.map((conv) => (
+            <ConversationItem
+              key={conv.id}
+              conversation={conv}
+              isActive={conv.id === activeConversationId}
+              onSelect={() => onSelectConversation(conv.id)}
+              onDelete={() => onDeleteConversation(conv.id)}
+            />
+          ))
+        )}
+      </div>
 
       {/* Footer */}
-      {!isCollapsed && (
-        <div className="sidebar__footer">
-          <p className="sidebar__footer-text">
-            对话保存在本地浏览器
-          </p>
-        </div>
-      )}
+      <div className="sidebar__footer">
+        <p className="sidebar__footer-text">
+          对话保存在本地浏览器
+        </p>
+      </div>
     </aside>
   );
 }
