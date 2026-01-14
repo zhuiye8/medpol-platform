@@ -9,7 +9,7 @@ export function StatsCard({ label, value, description }: StatsCardProps) {
     <div className="stats-card">
       <div className="stats-card__label">{label}</div>
       <div className="stats-card__value">{value}</div>
-      {description ? <div style={{ color: "#94a3b8", marginTop: 4 }}>{description}</div> : null}
+      {description ? <div className="muted small">{description}</div> : null}
     </div>
   );
 }

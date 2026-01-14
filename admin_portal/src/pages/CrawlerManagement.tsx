@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useScheduler } from "@/hooks/useScheduler";
 import type { LogLine } from "@/types/api";
-import type { CrawlerJobItem, CrawlerJobRun, PipelineRunDetail, PipelineRunItem, SourceProxyItem, ProxyMode } from "@/types/scheduler";
+import type { CrawlerJobItem, CrawlerJobRun, PipelineRunDetail, PipelineRunItem, SourceProxyItem, ProxyMode, TaskType } from "@/types/scheduler";
 import { fetchSourceProxyList, updateSourceProxyConfig } from "@/services/scheduler";
 
 type JobType = "scheduled" | "one_off";
 
 interface JobFormState {
   name: string;
+  task_type: TaskType;
   crawler_name: string;
   job_type: JobType;
   interval_minutes?: number;
@@ -18,6 +19,9 @@ interface JobFormState {
   max_attempts?: number;
   request_max_retries?: number;
   enabled: boolean;
+  // Embeddings specific
+  embeddings_days?: number;
+  embeddings_force?: boolean;
 }
 
 interface LogModalState {
@@ -32,6 +36,7 @@ interface LogModalState {
 
 const defaultForm: JobFormState = {
   name: "",
+  task_type: "crawler",
   crawler_name: "",
   job_type: "scheduled",
   interval_minutes: 60,
@@ -41,6 +46,14 @@ const defaultForm: JobFormState = {
   max_attempts: 3,
   request_max_retries: 3,
   enabled: true,
+  embeddings_days: 2,
+  embeddings_force: false,
+};
+
+const TASK_TYPE_LABELS: Record<TaskType, string> = {
+  crawler: "爬虫任务",
+  finance_sync: "财务同步",
+  embeddings_index: "向量化索引",
 };
 
 function StatusBadge({ status }: { status?: string | null }) {
@@ -310,28 +323,49 @@ export default function CrawlerManagementPage() {
   const handleCreateJob = async () => {
     setSubmitting(true);
     try {
-      const payload = {
-        meta: {
-          max_pages: form.max_pages,
-          max_items: form.max_items,
-          timeout: form.timeout,
-        },
-      };
-      const retry_config: Record<string, unknown> = {
-        max_attempts: form.max_attempts,
-        attempt_backoff: 1.5,
-        request: { max_retries: form.request_max_retries, timeout: form.timeout },
-      };
-      await createJob({
+      let payload: Record<string, unknown> = {};
+      let retry_config: Record<string, unknown> = {};
+
+      if (form.task_type === "crawler") {
+        payload = {
+          meta: {
+            max_pages: form.max_pages,
+            max_items: form.max_items,
+            timeout: form.timeout,
+          },
+        };
+        retry_config = {
+          max_attempts: form.max_attempts,
+          attempt_backoff: 1.5,
+          request: { max_retries: form.request_max_retries, timeout: form.timeout },
+        };
+      } else if (form.task_type === "embeddings_index") {
+        payload = {
+          meta: {},
+          days: form.embeddings_days,
+          force: form.embeddings_force,
+        };
+      } else if (form.task_type === "finance_sync") {
+        payload = { meta: {} };
+      }
+
+      const jobData: Record<string, unknown> = {
         name: form.name,
-        crawler_name: form.crawler_name,
+        task_type: form.task_type,
         job_type: form.job_type,
         schedule_cron: form.job_type === "scheduled" ? form.schedule_cron : null,
         interval_minutes: form.job_type === "scheduled" ? form.interval_minutes : null,
         payload,
         retry_config,
         enabled: form.enabled,
-      } as unknown as Record<string, unknown>);
+      };
+
+      // Only include crawler_name for crawler tasks
+      if (form.task_type === "crawler") {
+        jobData.crawler_name = form.crawler_name;
+      }
+
+      await createJob(jobData);
       await refresh();
       setForm(defaultForm);
     } catch (err) {
@@ -553,27 +587,39 @@ export default function CrawlerManagementPage() {
         <div className="panel__header">
           <div>
             <h3>新建任务</h3>
-            <p className="muted small">来源自动创建/匹配，无需手填来源 ID。</p>
+            <p className="muted small">支持爬虫、财务同步、向量化等多种任务类型。</p>
           </div>
         </div>
         <div className="form-grid">
           <label>
             任务名称
-            <input value={form.name} onChange={(e) => handleField("name", e.target.value)} placeholder="如：每小时-国家药监局" />
+            <input value={form.name} onChange={(e) => handleField("name", e.target.value)} placeholder="如：每日向量化" />
           </label>
           <label>
-            爬虫
-            <select value={form.crawler_name} onChange={(e) => handleField("crawler_name", e.target.value)}>
-              <option value="">请选择爬虫</option>
-              {crawlerOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
+            任务类型
+            <select value={form.task_type} onChange={(e) => handleField("task_type", e.target.value as TaskType)}>
+              {(Object.keys(TASK_TYPE_LABELS) as TaskType[]).map((type) => (
+                <option key={type} value={type}>
+                  {TASK_TYPE_LABELS[type]}
                 </option>
               ))}
             </select>
           </label>
+          {form.task_type === "crawler" && (
+            <label>
+              爬虫
+              <select value={form.crawler_name} onChange={(e) => handleField("crawler_name", e.target.value)}>
+                <option value="">请选择爬虫</option>
+                {crawlerOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label>
-            任务类型
+            调度类型
             <select value={form.job_type} onChange={(e) => handleField("job_type", e.target.value as JobType)}>
               <option value="scheduled">定时</option>
               <option value="one_off">临时</option>
@@ -595,56 +641,86 @@ export default function CrawlerManagementPage() {
                 <input
                   value={form.schedule_cron || ""}
                   onChange={(e) => handleField("schedule_cron", e.target.value)}
-                  placeholder="*/30 * * * *"
+                  placeholder="0 5 * * * (每天5点)"
                 />
               </label>
             </>
           )}
-          <label>
-            最大采集列表页
-            <input
-              type="number"
-              value={form.max_pages}
-              onChange={(e) => handleField("max_pages", Number(e.target.value))}
-              min={1}
-            />
-          </label>
-          <label>
-            每页最大条数
-            <input
-              type="number"
-              value={form.max_items}
-              onChange={(e) => handleField("max_items", Number(e.target.value))}
-              min={1}
-            />
-          </label>
-          <label>
-            请求超时(秒)
-            <input
-              type="number"
-              value={form.timeout}
-              onChange={(e) => handleField("timeout", Number(e.target.value))}
-              min={1}
-            />
-          </label>
-          <label>
-            爬虫级重试次数
-            <input
-              type="number"
-              value={form.max_attempts}
-              onChange={(e) => handleField("max_attempts", Number(e.target.value))}
-              min={1}
-            />
-          </label>
-          <label>
-            单次请求重试
-            <input
-              type="number"
-              value={form.request_max_retries}
-              onChange={(e) => handleField("request_max_retries", Number(e.target.value))}
-              min={0}
-            />
-          </label>
+          {form.task_type === "crawler" && (
+            <>
+              <label>
+                最大采集列表页
+                <input
+                  type="number"
+                  value={form.max_pages}
+                  onChange={(e) => handleField("max_pages", Number(e.target.value))}
+                  min={1}
+                />
+              </label>
+              <label>
+                每页最大条数
+                <input
+                  type="number"
+                  value={form.max_items}
+                  onChange={(e) => handleField("max_items", Number(e.target.value))}
+                  min={1}
+                />
+              </label>
+              <label>
+                请求超时(秒)
+                <input
+                  type="number"
+                  value={form.timeout}
+                  onChange={(e) => handleField("timeout", Number(e.target.value))}
+                  min={1}
+                />
+              </label>
+              <label>
+                爬虫级重试次数
+                <input
+                  type="number"
+                  value={form.max_attempts}
+                  onChange={(e) => handleField("max_attempts", Number(e.target.value))}
+                  min={1}
+                />
+              </label>
+              <label>
+                单次请求重试
+                <input
+                  type="number"
+                  value={form.request_max_retries}
+                  onChange={(e) => handleField("request_max_retries", Number(e.target.value))}
+                  min={0}
+                />
+              </label>
+            </>
+          )}
+          {form.task_type === "embeddings_index" && (
+            <>
+              <label>
+                处理天数（基于爬取时间）
+                <input
+                  type="number"
+                  value={form.embeddings_days}
+                  onChange={(e) => handleField("embeddings_days", Number(e.target.value))}
+                  min={1}
+                />
+              </label>
+              <label className="checkbox">
+                <input
+                  type="checkbox"
+                  checked={form.embeddings_force}
+                  onChange={(e) => handleField("embeddings_force", e.target.checked)}
+                />
+                强制重建（覆盖已有向量）
+              </label>
+            </>
+          )}
+          {form.task_type === "finance_sync" && (
+            <p className="muted small" style={{ gridColumn: "1 / -1" }}>
+              财务同步任务会自动同步当月数据，无需额外配置。
+            </p>
+          )}
           <label className="checkbox">
             <input
               type="checkbox"
@@ -655,7 +731,11 @@ export default function CrawlerManagementPage() {
           </label>
         </div>
         <div className="panel__actions">
-          <button onClick={handleCreateJob} disabled={submitting || !form.name || !form.crawler_name} className="primary">
+          <button
+            onClick={handleCreateJob}
+            disabled={submitting || !form.name || (form.task_type === "crawler" && !form.crawler_name)}
+            className="primary"
+          >
             {submitting ? "创建中..." : "创建任务"}
           </button>
         </div>
@@ -678,9 +758,9 @@ export default function CrawlerManagementPage() {
             <thead>
               <tr>
                 <th>名称</th>
-                <th>爬虫</th>
-                <th>来源</th>
-                <th>类型</th>
+                <th>任务类型</th>
+                <th>爬虫/来源</th>
+                <th>调度</th>
                 <th>下次时间</th>
                 <th>最近状态</th>
                 <th>操作</th>
@@ -690,9 +770,9 @@ export default function CrawlerManagementPage() {
               {jobs.map((job: CrawlerJobItem) => (
                 <tr key={job.id}>
                   <td>{job.name}</td>
-                  <td>{job.crawler_name}</td>
-                  <td>{job.source_id}</td>
-                  <td>{job.job_type}</td>
+                  <td>{TASK_TYPE_LABELS[job.task_type] || job.task_type}</td>
+                  <td>{job.task_type === "crawler" ? (job.crawler_name || "-") : "-"}</td>
+                  <td>{job.job_type === "scheduled" ? "定时" : "临时"}</td>
                   <td>{job.next_run_at ? new Date(job.next_run_at).toLocaleString() : "-"}</td>
                   <td>
                     <StatusBadge status={job.last_status || undefined} />

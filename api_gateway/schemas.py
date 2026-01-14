@@ -72,8 +72,9 @@ class CrawlerJobPayload(BaseModel):
 
 class CrawlerJobBase(BaseModel):
     name: str
-    crawler_name: str
-    source_id: Optional[str] = None
+    task_type: Literal["crawler", "finance_sync", "embeddings_index"] = "crawler"
+    crawler_name: Optional[str] = None  # Required only for crawler tasks
+    source_id: Optional[str] = None  # Required only for crawler tasks
     job_type: Literal["scheduled", "one_off"]
     schedule_cron: Optional[str] = None
     interval_minutes: Optional[int] = None
@@ -88,6 +89,7 @@ class CrawlerJobCreate(CrawlerJobBase):
 
 class CrawlerJobUpdate(BaseModel):
     name: Optional[str] = None
+    task_type: Optional[Literal["crawler", "finance_sync", "embeddings_index"]] = None
     crawler_name: Optional[str] = None
     source_id: Optional[str] = None
     job_type: Optional[Literal["scheduled", "one_off"]] = None
@@ -101,7 +103,8 @@ class CrawlerJobUpdate(BaseModel):
 class CrawlerJobItem(BaseModel):
     id: str
     name: str
-    crawler_name: str
+    task_type: str = "crawler"
+    crawler_name: Optional[str] = None
     source_id: Optional[str] = None
     job_type: str
     schedule_cron: Optional[str]

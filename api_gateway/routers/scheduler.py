@@ -115,6 +115,7 @@ def _to_job_item(job: models.CrawlerJobORM) -> CrawlerJobItem:
     return CrawlerJobItem(
         id=job.id,
         name=job.name,
+        task_type=getattr(job, "task_type", "crawler") or "crawler",
         crawler_name=job.crawler_name,
         source_id=job.source_id,
         job_type=job.job_type,
@@ -207,28 +208,34 @@ def create_crawler_job(
     db: Session = Depends(get_db_session),
 ) -> Envelope[CrawlerJobItem]:
     _validate_job_payload(job_data)
-    source_repo = SourceRepository(db)
+    task_type = job_data.task_type or "crawler"
     source_id = job_data.source_id
+    crawler_name = job_data.crawler_name
 
-    crawler_cls = crawler_registry.available().get(job_data.crawler_name)
-    category = getattr(crawler_cls, "category", ArticleCategory.FRONTIER)
-    label = getattr(crawler_cls, "label", job_data.crawler_name)
-    if not source_id:
-        source = source_repo.get_or_create_default(
-            crawler_name=job_data.crawler_name,
-            category=getattr(category, "value", category),
-            label=label,
-            base_url=f"https://{job_data.crawler_name}.example.com",
-        )
-        source_id = source.id
-    elif not source_repo.get_by_id(source_id):
-        source = source_repo.get_or_create_default(
-            crawler_name=job_data.crawler_name,
-            category=getattr(category, "value", category),
-            label=label,
-            base_url=f"https://{job_data.crawler_name}.example.com",
-        )
-        source_id = source.id
+    # For crawler tasks, validate and set up source
+    if task_type == "crawler":
+        if not crawler_name:
+            raise HTTPException(status_code=400, detail="爬虫任务需要指定 crawler_name")
+        source_repo = SourceRepository(db)
+        crawler_cls = crawler_registry.available().get(crawler_name)
+        category = getattr(crawler_cls, "category", ArticleCategory.FRONTIER)
+        label = getattr(crawler_cls, "label", crawler_name)
+        if not source_id:
+            source = source_repo.get_or_create_default(
+                crawler_name=crawler_name,
+                category=getattr(category, "value", category),
+                label=label,
+                base_url=f"https://{crawler_name}.example.com",
+            )
+            source_id = source.id
+        elif not source_repo.get_by_id(source_id):
+            source = source_repo.get_or_create_default(
+                crawler_name=crawler_name,
+                category=getattr(category, "value", category),
+                label=label,
+                base_url=f"https://{crawler_name}.example.com",
+            )
+            source_id = source.id
 
     repo = CrawlerJobRepository(db)
     now = _utc_now()
@@ -243,7 +250,8 @@ def create_crawler_job(
     job = models.CrawlerJobORM(
         id=str(uuid4()),
         name=job_data.name,
-        crawler_name=job_data.crawler_name,
+        task_type=task_type,
+        crawler_name=crawler_name,
         source_id=source_id,
         job_type=job_data.job_type,
         schedule_cron=job_data.schedule_cron,
@@ -274,6 +282,8 @@ def update_crawler_job(
     if not job:
         raise HTTPException(status_code=404, detail="任务不存在")
 
+    if job_data.task_type is not None:
+        job.task_type = job_data.task_type
     if job_data.job_type:
         job.job_type = job_data.job_type
     if job_data.name is not None:
@@ -296,6 +306,7 @@ def update_crawler_job(
     _validate_job_payload(
         CrawlerJobCreate(
             name=job.name,
+            task_type=getattr(job, "task_type", "crawler") or "crawler",
             crawler_name=job.crawler_name,
             source_id=job.source_id,
             job_type=job.job_type,

@@ -127,15 +127,16 @@ class AIResultORM(TimestampMixin, Base):
 
 
 class CrawlerJobORM(TimestampMixin, Base):
-    """Crawler job config."""
+    """Crawler job config (supports crawler, finance_sync, embeddings_index tasks)."""
 
     __tablename__ = "crawler_jobs"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     name: Mapped[str] = mapped_column(String(128))
-    crawler_name: Mapped[str] = mapped_column(String(128))
-    source_id: Mapped[str] = mapped_column(String(36), ForeignKey("sources.id"))
-    job_type: Mapped[str] = mapped_column(String(16))
+    task_type: Mapped[str] = mapped_column(String(32), default="crawler")  # crawler/finance_sync/embeddings_index
+    crawler_name: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)  # Only for crawler tasks
+    source_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("sources.id"), nullable=True)  # Only for crawler tasks
+    job_type: Mapped[str] = mapped_column(String(16))  # scheduled/one_off
     schedule_cron: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     interval_minutes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     payload: Mapped[dict] = mapped_column(JSON, default=dict)
@@ -145,7 +146,7 @@ class CrawlerJobORM(TimestampMixin, Base):
     last_run_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     last_status: Mapped[Optional[str]] = mapped_column(String(16))
 
-    source: Mapped["SourceORM"] = relationship()
+    source: Mapped[Optional["SourceORM"]] = relationship()  # Optional for non-crawler tasks
     runs: Mapped[List["CrawlerJobRunORM"]] = relationship(
         back_populates="job", cascade="all, delete-orphan"
     )

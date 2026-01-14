@@ -24,21 +24,25 @@ export default function DashboardPage() {
   const topCategories = formatTopCategories(stats.categories as Record<ArticleCategory, number>);
 
   return (
-    <div>
+    <div className="page">
       <div className="page-header">
         <h1>运行概览</h1>
-        <span style={{ color: "#64748b" }}>最新采集与 AI 加工情况总览</span>
+        <p className="muted">最新采集与 AI 加工情况总览</p>
       </div>
 
       <div className="toolbar">
-        {lastUpdated ? (
-          <span style={{ fontSize: 13, color: "#475569" }}>
-            最近同步：{dayjs(lastUpdated).format("YYYY-MM-DD HH:mm:ss")}
-          </span>
-        ) : null}
-        <button className="ghost" onClick={refresh}>
-          手动刷新
-        </button>
+        <div className="toolbar__left">
+          {lastUpdated ? (
+            <span className="muted small">
+              最近同步：{dayjs(lastUpdated).format("YYYY-MM-DD HH:mm:ss")}
+            </span>
+          ) : null}
+        </div>
+        <div className="toolbar__right">
+          <button className="ghost" onClick={refresh}>
+            手动刷新
+          </button>
+        </div>
       </div>
 
       <div className="stats-grid">
@@ -51,8 +55,10 @@ export default function DashboardPage() {
         <StatsCard label="分类覆盖数" value={topCategories.length || "--"} description="Top 分类计数" />
       </div>
 
-      <div style={{ marginTop: 24 }} className="panel">
-        <h3 style={{ marginTop: 0 }}>分类热度</h3>
+      <section className="panel">
+        <div className="panel__header">
+          <h3>分类热度</h3>
+        </div>
         {!topCategories.length && !loading ? (
           <div className="empty-state">暂无分类统计</div>
         ) : (
@@ -62,12 +68,14 @@ export default function DashboardPage() {
             ))}
           </div>
         )}
-      </div>
+      </section>
 
-      <div style={{ marginTop: 24 }}>
-        <h3>最新文章</h3>
+      <section className="panel">
+        <div className="panel__header">
+          <h3>最新文章</h3>
+        </div>
         <ArticleTable items={items.slice(0, 10)} loading={loading} emptyText="暂无可用文章" />
-      </div>
+      </section>
     </div>
   );
 }

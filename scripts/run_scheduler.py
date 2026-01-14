@@ -24,12 +24,16 @@ def process_due_jobs(session) -> int:
     processed = 0
 
     for job in due_jobs:
+        # For non-crawler tasks, use task_type as executed_crawler
+        task_type = getattr(job, "task_type", "crawler") or "crawler"
+        executed_name = job.crawler_name if task_type == "crawler" else task_type
+
         run = models.CrawlerJobRunORM(
             id=str(uuid4()),
             job_id=job.id,
             status="running",
             started_at=utc_now(),
-            executed_crawler=job.crawler_name,
+            executed_crawler=executed_name or task_type,
             params_snapshot={},
             result_count=0,
             log_path=None,

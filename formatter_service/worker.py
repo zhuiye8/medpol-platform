@@ -272,6 +272,11 @@ def _select_articles_for_index(
     days: Optional[int] = None,
     limit: Optional[int] = None,
 ):
+    """Select articles for embedding indexing.
+
+    Uses crawl_time (not publish_time) because publish_time can be very old
+    while crawl_time reflects when the article was actually fetched.
+    """
     if article_ids:
         return (
             session.query(orm_models.ArticleORM)
@@ -280,7 +285,8 @@ def _select_articles_for_index(
         )
     if days:
         cutoff = datetime.utcnow() - timedelta(days=days)
-        q = session.query(orm_models.ArticleORM).filter(orm_models.ArticleORM.publish_time >= cutoff)
+        # Use crawl_time instead of publish_time - publish_time can be very old
+        q = session.query(orm_models.ArticleORM).filter(orm_models.ArticleORM.crawl_time >= cutoff)
         if limit:
             q = q.limit(limit)
         return q.all()

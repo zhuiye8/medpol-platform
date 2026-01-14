@@ -25,55 +25,64 @@ export default function ArticleDetailPage() {
   }
 
   return (
-    <div>
+    <div className="page">
       <div className="page-header">
-        <h1>文章详情</h1>
-        <span style={{ color: "#64748b" }}>文章 ID：{articleId}</span>
-        <Link to="/articles" className="ghost" style={{ marginTop: 8 }}>
-          返回列表
+        <div>
+          <h1>文章详情</h1>
+          <p className="muted">文章 ID：{articleId}</p>
+        </div>
+        <Link to="/articles" className="ghost" style={{ textDecoration: "none" }}>
+          <button className="ghost">返回列表</button>
         </Link>
       </div>
       {loading ? (
-        <div className="panel">加载中...</div>
-      ) : error ? (
-        <div className="panel" style={{ color: "#b91c1c" }}>
-          {error}
+        <div className="empty-state">
+          <div className="loading-spinner" style={{ margin: "0 auto" }} />
+          <div style={{ marginTop: 12 }}>加载中...</div>
         </div>
+      ) : error ? (
+        <div className="error">{error}</div>
       ) : detail ? (
         <>
-          <div className="panel">
-            <h2>{detail.translated_title || detail.title}</h2>
-            <p style={{ color: "#64748b" }}>
+          <section className="panel">
+            <h2 style={{ marginTop: 0, fontSize: 20, fontWeight: 600 }}>{detail.translated_title || detail.title}</h2>
+            <p className="muted" style={{ marginBottom: 16 }}>
               来源：{detail.source_name} · 发布时间：{new Date(detail.publish_time).toLocaleString()}
             </p>
-            <div dangerouslySetInnerHTML={{ __html: detail.content_html }} />
-          </div>
+            <div className="article-content" dangerouslySetInnerHTML={{ __html: detail.content_html }} />
+          </section>
           {detail.translated_content_html ? (
-            <div className="panel" style={{ marginTop: 24 }}>
-              <h3>AI 翻译（{detail.original_source_language || "auto"}）</h3>
-              <div dangerouslySetInnerHTML={{ __html: detail.translated_content_html }} />
-            </div>
+            <section className="panel">
+              <div className="panel__header">
+                <h3>AI 翻译（{detail.original_source_language || "auto"}）</h3>
+              </div>
+              <div className="article-content" dangerouslySetInnerHTML={{ __html: detail.translated_content_html }} />
+            </section>
           ) : null}
           {detail.ai_analysis ? (
-            <div className="panel" style={{ marginTop: 24 }}>
-              <h3>AI 分析</h3>
+            <section className="panel">
+              <div className="panel__header">
+                <h3>AI 分析</h3>
+              </div>
               {detail.ai_analysis.content ? (
-                <p style={{ whiteSpace: "pre-wrap", marginTop: 8 }}>{detail.ai_analysis.content}</p>
+                <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{detail.ai_analysis.content}</p>
               ) : null}
               {detail.ai_analysis.is_positive_policy !== undefined &&
               detail.ai_analysis.is_positive_policy !== null ? (
-                <p style={{ color: detail.ai_analysis.is_positive_policy ? "#16a34a" : "#b91c1c" }}>
+                <span className={`pill ${detail.ai_analysis.is_positive_policy ? "pill--ok" : "pill--warn"}`}>
                   {detail.ai_analysis.is_positive_policy ? "利好政策" : "中性/不利"}
-                </p>
+                </span>
               ) : null}
-            </div>
+            </section>
           ) : null}
-          <div className="panel" style={{ marginTop: 24 }}>
-            <h3>模型调用记录</h3>
+          <section className="panel">
+            <div className="panel__header">
+              <h3>模型调用记录</h3>
+            </div>
             {!detail.ai_results.length ? (
               <div className="empty-state">暂无记录</div>
             ) : (
-              <table className="table">
+              <table className="list-table">
                 <thead>
                   <tr>
                     <th>任务</th>
@@ -94,7 +103,7 @@ export default function ArticleDetailPage() {
                 </tbody>
               </table>
             )}
-          </div>
+          </section>
         </>
       ) : null}
     </div>

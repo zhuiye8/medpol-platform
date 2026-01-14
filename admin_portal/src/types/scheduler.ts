@@ -12,11 +12,14 @@ export interface CrawlerJobPayload {
   end_time?: string | null;
 }
 
+export type TaskType = "crawler" | "finance_sync" | "embeddings_index";
+
 export interface CrawlerJobItem {
   id: string;
   name: string;
-  crawler_name: string;
-  source_id: string;
+  task_type: TaskType;
+  crawler_name?: string | null;
+  source_id?: string | null;
   job_type: "scheduled" | "one_off";
   schedule_cron?: string | null;
   interval_minutes?: number | null;
