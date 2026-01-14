@@ -84,3 +84,34 @@ export interface TaskStatus {
   state: string;
   result: unknown;
 }
+
+// ==================== Employee Import Types ====================
+
+export interface CompanyOption {
+  value: string;
+  label: string;
+}
+
+export interface EmployeeStats {
+  total: number;
+  by_company: Record<string, number>;
+}
+
+export interface EmployeeColumn {
+  key: string;
+  label: string;
+}
+
+export interface EmployeePreviewRow {
+  row_num: number;
+  warnings: string[];
+  [key: string]: unknown;  // Dynamic fields
+}
+
+export interface EmployeePreviewData {
+  total_rows: number;
+  valid_rows: number;
+  invalid_rows: number;
+  columns: EmployeeColumn[];
+  preview: EmployeePreviewRow[];
+}

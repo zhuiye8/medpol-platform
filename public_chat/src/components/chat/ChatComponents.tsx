@@ -25,25 +25,79 @@ interface DataFrameProps {
   title?: string;
 }
 
+/**
+ * 导出 CSV 文件（支持中文，Excel 兼容）
+ */
+function exportToCsv(columns: string[], rows: Record<string, unknown>[], title?: string) {
+  const escapeCsvCell = (val: unknown): string => {
+    if (val === null || val === undefined) return "";
+    const str = String(val);
+    if (str.includes(",") || str.includes("\n") || str.includes('"')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  const headerRow = columns.map(escapeCsvCell).join(",");
+  const dataRows = rows.map((row) =>
+    columns.map((col) => escapeCsvCell(row[col])).join(",")
+  );
+  const csvContent = [headerRow, ...dataRows].join("\n");
+
+  const BOM = "\uFEFF";
+  const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8" });
+
+  const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, "");
+  const filename = `${title || "数据导出"}_${timestamp}.csv`;
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 export function DataFrameRenderer({ data, title }: DataFrameProps) {
-  const { columns, rows, row_count } = data;
+  const { columns, rows, row_count, column_labels } = data;
 
   if (!columns || !rows || rows.length === 0) {
     return <div className="chat-empty">暂无数据</div>;
   }
 
+  // 获取列的显示名称（优先使用 column_labels 中的中文名）
+  const getColumnLabel = (col: string): string => {
+    return column_labels?.[col] || col;
+  };
+
+  const handleExport = () => {
+    exportToCsv(columns, rows, title);
+  };
+
   return (
     <div className="chat-card chat-dataframe">
       <div className="chat-card__header">
         <h4 className="chat-card__title">{title || "数据表"}</h4>
-        <span className="chat-chip">共 {row_count} 条</span>
+        <div className="chat-card__actions">
+          <button
+            type="button"
+            className="chat-dataframe__export-btn"
+            onClick={handleExport}
+            title="导出 CSV"
+          >
+            ⬇ 导出
+          </button>
+          <span className="chat-chip">共 {row_count} 条</span>
+        </div>
       </div>
       <div className="chat-dataframe__wrapper">
         <table className="chat-dataframe__table">
           <thead>
             <tr>
               {columns.map((col) => (
-                <th key={col}>{col}</th>
+                <th key={col}>{getColumnLabel(col)}</th>
               ))}
             </tr>
           </thead>
@@ -67,6 +121,9 @@ export function DataFrameRenderer({ data, title }: DataFrameProps) {
 
 function formatCellValue(val: unknown): string {
   if (val === null || val === undefined) return "-";
+  if (typeof val === "boolean") {
+    return val ? "是" : "否";
+  }
   if (typeof val === "number") {
     return val.toLocaleString("zh-CN", { maximumFractionDigits: 2 });
   }

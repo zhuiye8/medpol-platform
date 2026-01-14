@@ -560,6 +560,36 @@
   font-weight: 600;
 }
 
+.chat-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chat-dataframe__export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chat-dataframe__export-btn:hover {
+  background: var(--border-color);
+  color: var(--text-primary);
+}
+
+.chat-dataframe__export-btn:active {
+  transform: scale(0.96);
+}
+
 .chat-card__title {
   font-size: 15px;
   font-weight: 600;

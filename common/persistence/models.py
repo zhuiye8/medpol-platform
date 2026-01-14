@@ -288,3 +288,98 @@ class ArticleEmbeddingORM(TimestampMixin, Base):
     model_name: Mapped[str] = mapped_column(String(64), nullable=False)
 
     article: Mapped["ArticleORM"] = relationship()
+
+
+# ============================================================
+# 用户认证相关模型
+# ============================================================
+
+
+class RoleORM(TimestampMixin, Base):
+    """Role for RBAC."""
+
+    __tablename__ = "roles"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    name: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(String(256))
+    permissions: Mapped[dict] = mapped_column(JSON, default=dict)
+
+    users: Mapped[List["UserORM"]] = relationship(
+        secondary="user_roles", back_populates="roles"
+    )
+
+
+class UserORM(TimestampMixin, Base):
+    """User account."""
+
+    __tablename__ = "users"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    username: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    display_name: Mapped[Optional[str]] = mapped_column(String(128))
+    email: Mapped[Optional[str]] = mapped_column(String(128))
+    company_no: Mapped[Optional[str]] = mapped_column(String(32))
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    roles: Mapped[List["RoleORM"]] = relationship(
+        secondary="user_roles", back_populates="users"
+    )
+
+    @property
+    def role_names(self) -> List[str]:
+        """Get list of role names."""
+        return [role.name for role in self.roles]
+
+    @property
+    def primary_role(self) -> Optional[str]:
+        """Get primary (first) role name."""
+        return self.roles[0].name if self.roles else None
+
+
+class UserRoleORM(Base):
+    """User-Role association table."""
+
+    __tablename__ = "user_roles"
+
+    user_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    role_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("roles.id", ondelete="CASCADE"), primary_key=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.utcnow
+    )
+
+
+# ============================================================
+# 员工信息模型
+# ============================================================
+
+
+class EmployeeORM(TimestampMixin, Base):
+    """Employee information."""
+
+    __tablename__ = "employees"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    company_no: Mapped[str] = mapped_column(String(32), nullable=False)
+    company_name: Mapped[Optional[str]] = mapped_column(String(128))
+    name: Mapped[str] = mapped_column(String(64), nullable=False)
+    gender: Mapped[Optional[str]] = mapped_column(String(8))
+    id_number: Mapped[Optional[str]] = mapped_column(String(32))  # 敏感字段
+    phone: Mapped[Optional[str]] = mapped_column(String(32))  # 敏感字段
+    department: Mapped[Optional[str]] = mapped_column(String(128))
+    position: Mapped[Optional[str]] = mapped_column(String(128))
+    employee_level: Mapped[Optional[str]] = mapped_column(String(32))
+    is_contract: Mapped[Optional[bool]] = mapped_column(Boolean)
+    highest_education: Mapped[Optional[str]] = mapped_column(String(32))
+    graduate_school: Mapped[Optional[str]] = mapped_column(String(128))
+    major: Mapped[Optional[str]] = mapped_column(String(128))
+    political_status: Mapped[Optional[str]] = mapped_column(String(32))
+    professional_title: Mapped[Optional[str]] = mapped_column(String(64))
+    skill_level: Mapped[Optional[str]] = mapped_column(String(32))
+    hire_date: Mapped[Optional[date]] = mapped_column(Date)
+    raw_data: Mapped[dict] = mapped_column(JSON, default=dict)

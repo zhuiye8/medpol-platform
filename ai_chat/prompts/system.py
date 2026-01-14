@@ -4,10 +4,15 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Optional
 from zoneinfo import ZoneInfo
 
 from ai_chat.prompts.company_info import GROUP_INTRO, build_company_context
 
+
+# 员工数据权限角色
+EMPLOYEE_FULL_ACCESS_ROLES = {"admin", "hr_manager"}
+EMPLOYEE_BASIC_ACCESS_ROLES = {"admin", "hr_manager", "hr_viewer"}
 
 # 指标类型完整映射
 TYPE_NO_MAPPING = {
@@ -39,8 +44,65 @@ COMPANY_MAPPING = {
 }
 
 
-def build_system_prompt(persona: str | None = None, mode: str = "rag") -> str:
-    """生成带有模式提示的系统提示。"""
+def build_employee_knowledge(user_role: str) -> str:
+    """根据用户角色生成员工查询知识。
+
+    Args:
+        user_role: 用户角色
+
+    Returns:
+        员工查询提示词（如果无权限则返回空字符串）
+    """
+    if user_role not in EMPLOYEE_BASIC_ACCESS_ROLES:
+        return ""
+
+    # 基础字段（所有有权限的角色可见）
+    base_fields = (
+        "id, company_no(公司编号), company_name(公司名称), name(姓名), gender(性别), "
+        "department(部门), position(职务), employee_level(员工级别：一般员工/中层/管理层), "
+        "highest_education(最高学历), graduate_school(毕业院校), major(专业), "
+        "political_status(政治面貌), professional_title(职称), skill_level(技能等级), "
+        "hire_date(入职时间)"
+    )
+
+    if user_role in EMPLOYEE_FULL_ACCESS_ROLES:
+        # 管理员和HR经理可见敏感字段
+        fields_desc = f"{base_fields}, id_number(身份证号), phone(电话号码)"
+        access_note = "可查看全部员工信息（含身份证号、电话）"
+    else:
+        # HR查看者只能看基础字段
+        fields_desc = base_fields
+        access_note = "仅可查看基础信息（不含身份证号、电话等敏感信息）"
+
+    return (
+        f"【员工查询规范】\n"
+        f"表名：employees\n"
+        f"可用字段：{fields_desc}\n"
+        f"权限说明：{access_note}\n"
+        f"公司编号：ydjyhb=扬大基因(合), lbyyhb=联博(合), plshb=普林斯(合), lhjthb=股份(合)\n"
+        f"SQL示例：\n"
+        f"  - 查询部门员工：SELECT name, department, position FROM employees WHERE department = '市场部';\n"
+        f"  - 按学历统计：SELECT highest_education, COUNT(*) FROM employees GROUP BY highest_education;\n"
+        f"  - 查询公司员工：SELECT * FROM employees WHERE company_no = 'ydjyhb';\n"
+        f"注意：\n"
+        f"1. 员工数据回答时使用自然语言，如：扬大基因市场部共有5名员工\n"
+        f"2. 禁止暴露SQL语句和技术细节\n"
+        f"3. 敏感信息（身份证、电话）仅在用户明确请求且有权限时提供\n"
+    )
+
+
+def build_system_prompt(
+    persona: str | None = None,
+    mode: str = "rag",
+    user_role: str = "viewer",
+) -> str:
+    """生成带有模式提示的系统提示。
+
+    Args:
+        persona: 人格设定
+        mode: 模式 - "rag", "sql", "hybrid"
+        user_role: 用户角色 - 决定员工数据访问权限
+    """
 
     persona_key = persona or "general"
     now = datetime.now(ZoneInfo("Asia/Shanghai"))
@@ -93,6 +155,7 @@ def build_system_prompt(persona: str | None = None, mode: str = "rag") -> str:
         '   - 禁止说"根据查询结果"、"Results saved to file"等内部提示\n'
         "   - 直接用自然语言陈述数据，如：联环集团2024年9月营业收入为xxx万元\n"
         "7. 禁止生成 markdown 图片语法（如 ![xxx](url)），图表会由系统自动展示\n"
+        "8. 禁止生成 markdown 表格（如 |列1|列2|）。数据查询结果会自动以表格组件展示，你只需用自然语言总结数据要点，不要重复生成表格。\n"
     )
 
     # 图表生成引导
@@ -120,13 +183,17 @@ def build_system_prompt(persona: str | None = None, mode: str = "rag") -> str:
     # 构建公司信息上下文（所有模式通用）
     company_context = build_company_context()
 
+    # 构建员工查询知识（根据角色权限）
+    employee_knowledge = build_employee_knowledge(user_role)
+
     return (
         f"【当前时间】北京时间：{time_str}（{current_year}年）。\n"
-        f"【身份】你是联环集团的专属AI助手，负责医药政策与财务分析。回答需准确、简洁、中文输出，避免无依据的编造。\n"
+        f"【身份】你是联环集团的专属AI助手，负责医药政策、财务分析与人事查询。回答需准确、简洁、中文输出，避免无依据的编造。\n"
         f'【重要】用户说"我们"、"我们集团"、"我们公司"、"集团"时，指的就是联环集团。\n'
         f'用户说"今年/当年/本年"指的是{current_year}年，"去年"指{current_year-1}年。\n'
         f"【联环集团简介】\n{GROUP_INTRO}\n"
         f"{company_context}\n"
+        f"{employee_knowledge}\n"
         f"{mode_hint}\n"
         f"Persona={persona_key}。"
     )
@@ -147,4 +214,12 @@ FIELD_DISPLAY_MAPPING = {
 }
 
 
-__all__ = ["build_system_prompt", "TYPE_NO_MAPPING", "COMPANY_MAPPING", "FIELD_DISPLAY_MAPPING"]
+__all__ = [
+    "build_system_prompt",
+    "build_employee_knowledge",
+    "TYPE_NO_MAPPING",
+    "COMPANY_MAPPING",
+    "FIELD_DISPLAY_MAPPING",
+    "EMPLOYEE_FULL_ACCESS_ROLES",
+    "EMPLOYEE_BASIC_ACCESS_ROLES",
+]

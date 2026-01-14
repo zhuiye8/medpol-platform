@@ -86,6 +86,8 @@ export interface DataFrameData {
   columns: string[];
   rows: Record<string, unknown>[];
   row_count: number;
+  /** 列名中文映射，key 为数据库字段名，value 为中文显示名 */
+  column_labels?: Record<string, string>;
 }
 
 export interface ChartData {

@@ -120,3 +120,102 @@ export async function fetchTaskStatus(taskId: string): Promise<TaskStatus> {
   const resp = await apiRequest<AdminResp<TaskStatus>>(`/v1/admin/tasks/${taskId}`);
   return unwrap(resp);
 }
+
+// ==================== Employee Import APIs ====================
+
+import type {
+  CompanyOption,
+  EmployeePreviewData,
+  EmployeeStats,
+} from "@/types/admin";
+import { getToken } from "./auth";
+
+const DEFAULT_BASE = "http://localhost:8000";
+const API_BASE_URL = (import.meta.env.VITE_API_BASE || DEFAULT_BASE).replace(/\/$/, "");
+
+export async function fetchEmployeeCompanies(): Promise<CompanyOption[]> {
+  const resp = await apiRequest<AdminResp<CompanyOption[]>>("/v1/admin/employees/companies");
+  return unwrap(resp);
+}
+
+export async function fetchEmployeeStats(): Promise<EmployeeStats> {
+  const resp = await apiRequest<AdminResp<EmployeeStats>>("/v1/admin/employees/stats");
+  return unwrap(resp);
+}
+
+export async function uploadEmployeeFile(file: File): Promise<{
+  file_id: string;
+  filename: string;
+  size: number;
+}> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const token = getToken();
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}/v1/admin/employees/upload`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(`上传失败: ${response.status}`);
+  }
+
+  const json = await response.json();
+  return unwrap(json);
+}
+
+export async function fetchEmployeeSheets(fileId: string): Promise<string[]> {
+  const resp = await apiRequest<AdminResp<string[]>>(
+    `/v1/admin/employees/preview/${fileId}/sheets`
+  );
+  return unwrap(resp);
+}
+
+export async function fetchEmployeePreview(
+  fileId: string,
+  companyNo: string,
+  sheetName?: string,
+  limit = 50
+): Promise<EmployeePreviewData> {
+  const resp = await apiRequest<AdminResp<EmployeePreviewData>>(
+    `/v1/admin/employees/preview/${fileId}`,
+    {
+      query: {
+        company_no: companyNo,
+        sheet_name: sheetName,
+        limit,
+      },
+    }
+  );
+  return unwrap(resp);
+}
+
+export async function triggerEmployeeImport(params: {
+  file_id: string;
+  company_no: string;
+  sheet_name?: string;
+}): Promise<{ task_id: string }> {
+  const resp = await apiRequest<AdminResp<{ task_id: string }>>(
+    "/v1/admin/employees/import",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    }
+  );
+  return unwrap(resp);
+}
+
+export async function fetchEmployeeTaskStatus(taskId: string): Promise<TaskStatus> {
+  const resp = await apiRequest<AdminResp<TaskStatus>>(
+    `/v1/admin/employees/tasks/${taskId}`
+  );
+  return unwrap(resp);
+}

@@ -2,9 +2,20 @@
 
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Iterable
+
+# 在导入任何可能使用 httpx 的模块前，设置 NO_PROXY 让本地请求绑过代理
+# 这解决了 Ollama 等本地服务因代理导致的 502 错误
+if "NO_PROXY" not in os.environ:
+    os.environ["NO_PROXY"] = "localhost,127.0.0.1"
+else:
+    # 确保 localhost 在 NO_PROXY 列表中
+    existing = os.environ["NO_PROXY"]
+    if "localhost" not in existing:
+        os.environ["NO_PROXY"] = f"{existing},localhost,127.0.0.1"
 
 from dotenv import load_dotenv
 

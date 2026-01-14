@@ -14,8 +14,8 @@ from common.utils.env import load_env
 # ensure .env is loaded for uvicorn direct run
 load_env()
 
-from .routers import admin, articles, scheduler
-from api_gateway.routers import admin_finance, admin_embeddings
+from .routers import admin, articles, scheduler, auth
+from api_gateway.routers import admin_finance, admin_embeddings, admin_employees
 from ai_chat.core import router as ai_chat_router
 
 
@@ -67,12 +67,14 @@ app.add_middleware(
     allow_origin_regex=allow_origin_regex,
 )
 
+app.include_router(auth.router, prefix="/v1/auth", tags=["auth"])
 app.include_router(articles.router, prefix="/v1/articles", tags=["articles"])
 app.include_router(admin.router, prefix="/v1/admin", tags=["admin"])
 app.include_router(scheduler.router, prefix="/v1", tags=["scheduler"])
 app.include_router(ai_chat_router, prefix="/v1/ai", tags=["ai-chat-new"])
 app.include_router(admin_finance.router, prefix="/v1/admin", tags=["admin-finance"])
 app.include_router(admin_embeddings.router, prefix="/v1/admin", tags=["admin-embeddings"])
+app.include_router(admin_employees.router, prefix="/v1/admin", tags=["admin-employees"])
 
 
 @app.get("/healthz")

@@ -69,6 +69,14 @@ class Settings(BaseSettings):
     # --- 嵌入式聊天认证 ---
     embed_auth_token: Optional[str] = Field(default=None, validation_alias="EMBED_AUTH_TOKEN")
 
+    # --- JWT 认证 ---
+    jwt_secret_key: str = Field(
+        default="medpol-secret-key-change-in-production",
+        validation_alias="JWT_SECRET_KEY"
+    )
+    jwt_algorithm: str = Field(default="HS256", validation_alias="JWT_ALGORITHM")
+    jwt_expire_minutes: int = Field(default=1440, validation_alias="JWT_EXPIRE_MINUTES")  # 24 hours
+
     model_config = SettingsConfigDict(
         case_sensitive=False,
         env_file=".env",

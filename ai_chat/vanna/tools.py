@@ -21,8 +21,10 @@ from vanna.tools.file_system import LocalFileSystem
 from vanna.core.registry import ToolRegistry
 
 from ai_chat.vanna.sql_runner import FinanceSqlRunner
+from ai_chat.vanna.employee_sql_runner import EmployeeSqlRunner
 from ai_chat.vanna.vectorstore import similarity_search
 from ai_chat.prompts.system import FIELD_DISPLAY_MAPPING, COMPANY_MAPPING
+from common.auth.service import Roles
 
 
 def _get_display_name(field: str) -> str:
@@ -47,6 +49,32 @@ class ChartArgs(BaseModel):
         default=None,
         description="仅当用户明确要求多种图表时使用。默认只生成一个图表。"
     )
+
+
+# 员工表字段 -> 中文显示名映射
+EMPLOYEE_COLUMN_LABELS = {
+    "name": "姓名",
+    "company_name": "公司",
+    "company_no": "公司编号",
+    "department": "部门",
+    "position": "职务",
+    "gender": "性别",
+    "employee_level": "员工级别",
+    "is_contract": "是/否劳动合同工",
+    "highest_education": "学历",
+    "graduate_school": "毕业院校",
+    "major": "专业",
+    "political_status": "政治面貌",
+    "professional_title": "职称",
+    "skill_level": "技能等级",
+    "hire_date": "入职日期",
+    "id_number": "身份证号",
+    "phone": "电话",
+}
+
+
+class EmployeeQueryArgs(BaseModel):
+    sql: str = Field(description="查询员工数据的 SQL 语句")
 
 
 class SearchResult(BaseModel):
@@ -487,37 +515,176 @@ class FinanceChartTool(Tool[ChartArgs]):
         return str(val)
 
 
-def build_tools(mode: str) -> List[Tool]:
-    """Return tools for the given mode."""
+class EmployeeQueryTool(Tool[EmployeeQueryArgs]):
+    """员工数据查询工具，带权限控制。
 
+    根据用户角色自动选择合适的视图：
+    - admin, hr_manager: 可见全部字段（含敏感信息）
+    - hr_viewer: 仅可见基础字段（不含身份证、电话）
+    - 其他角色: 无权访问
+    """
+
+    def __init__(self, user_role: str):
+        self.user_role = user_role
+        self.sql_runner = EmployeeSqlRunner(user_role)
+
+    @property
+    def name(self) -> str:
+        return "query_employees"
+
+    @property
+    def description(self) -> str:
+        if not self.sql_runner.can_access:
+            return "员工数据查询（当前角色无权访问）"
+
+        schema_desc = self.sql_runner.get_schema_description()
+        return f"查询员工数据（姓名、部门、职务、学历等）。\n{schema_desc}"
+
+    def get_args_schema(self):
+        return EmployeeQueryArgs
+
+    async def execute(self, context: ToolContext, args: EmployeeQueryArgs) -> ToolResult:
+        if not self.sql_runner.can_access:
+            return ToolResult(
+                success=False,
+                error=f"角色 {self.user_role} 无权访问员工数据"
+            )
+
+        try:
+            from vanna.capabilities.sql_runner.models import RunSqlToolArgs
+            sql_args = RunSqlToolArgs(sql=args.sql)
+            df = await self.sql_runner.run_sql(sql_args, context)
+
+            # 构建结果
+            if df.empty:
+                return ToolResult(
+                    success=True,
+                    result_for_llm="查询结果为空，没有找到符合条件的员工记录。",
+                    metadata={}  # 不返回 results/columns，避免创建空表格组件
+                )
+
+            # 转换为列表格式，过滤掉内部字段
+            hidden_columns = {"id", "raw_data", "created_at", "updated_at"}
+            columns = [col for col in df.columns if col not in hidden_columns]
+            results = [
+                {k: v for k, v in row.items() if k not in hidden_columns}
+                for row in df.to_dict(orient="records")
+            ]
+
+            # 生成中文列名映射
+            column_labels = {col: EMPLOYEE_COLUMN_LABELS.get(col, col) for col in columns}
+
+            # 生成数据摘要供 LLM 引用（避免 LLM 编造数据）
+            summary_lines = []
+            for row in results[:10]:  # 最多显示前10条
+                name = row.get("name", "")
+                dept = row.get("department", "")
+                pos = row.get("position", "")
+                edu = row.get("highest_education", "")
+                summary_lines.append(f"- {name}，{dept}，{pos}，{edu}")
+
+            data_summary = "\n".join(summary_lines)
+            if len(results) > 10:
+                data_summary += f"\n... 共 {len(results)} 条记录"
+
+            return ToolResult(
+                success=True,
+                result_for_llm=(
+                    f"查询到 {len(results)} 条员工记录：\n{data_summary}\n\n"
+                    "以上数据已在表格组件中完整展示。请用自然语言总结回答，禁止生成 markdown 表格。"
+                ),
+                metadata={
+                    "results": results,
+                    "columns": columns,
+                    "column_labels": column_labels,
+                    "total": len(results),
+                    "title": "员工查询结果",
+                }
+            )
+
+        except PermissionError as e:
+            return ToolResult(success=False, error=str(e))
+        except ValueError as e:
+            return ToolResult(success=False, error=str(e))
+        except Exception as e:
+            return ToolResult(success=False, error=f"查询出错: {str(e)}")
+
+
+def build_tools(mode: str, user_role: str = "viewer") -> List[Tool]:
+    """Return tools for the given mode and user role.
+
+    Args:
+        mode: 模式 - "rag", "sql", "hybrid"
+        user_role: 用户角色 - "admin", "finance", "viewer"
+
+    Returns:
+        工具列表
+
+    权限矩阵：
+    - admin: 财务 + 员工全字段 + 政策（hybrid模式）
+    - finance: 只有财务（sql模式）
+    - viewer: 政策 + 员工基础（rag模式、PC对话）
+    """
     tools: List[Tool] = []
-    sql_runner = FinanceSqlRunner()
-    sql_tool = RunSqlTool(
-        sql_runner=sql_runner,
-        file_system=LocalFileSystem(working_directory="vanna_outputs"),
-        custom_tool_name="query_finance_sql",
-        custom_tool_description="只读查询 finance_records，回答营业收入/利润等财务问题。",
-    )
 
-    search_tool = SearchArticlesTool()
-    chart_tool = FinanceChartTool()
+    # 财务查询工具（仅 admin 和 finance 角色可用）
+    if user_role in {Roles.ADMIN, Roles.FINANCE}:
+        sql_runner = FinanceSqlRunner()
+        sql_tool = RunSqlTool(
+            sql_runner=sql_runner,
+            file_system=LocalFileSystem(working_directory="vanna_outputs"),
+            custom_tool_name="query_finance_sql",
+            custom_tool_description="只读查询 finance_records，回答营业收入/利润等财务问题。",
+        )
+        chart_tool = FinanceChartTool()
+    else:
+        sql_tool = None
+        chart_tool = None
 
+    # 政策检索工具（admin 和 viewer 可用，finance 不可用）
+    search_tool = SearchArticlesTool() if user_role != Roles.FINANCE else None
+
+    # 员工查询工具（admin 和 viewer 可用，finance 不可用）
+    employee_tool = EmployeeQueryTool(user_role)
+
+    # 根据模式组合工具
     if mode == "sql":
-        tools.extend([sql_tool, chart_tool])  # SQL 模式也支持图表
+        # sql 模式：只有财务工具（finance 角色专用）
+        if sql_tool:
+            tools.extend([sql_tool, chart_tool])
     elif mode == "rag":
-        tools.append(search_tool)
-    else:  # hybrid 默认都带上
-        tools.extend([sql_tool, search_tool, chart_tool])
+        # rag 模式：政策 + 员工基础（viewer 角色）
+        if search_tool:
+            tools.append(search_tool)
+        if employee_tool.sql_runner.can_access:
+            tools.append(employee_tool)
+    else:  # hybrid 模式：全部工具（admin 角色）
+        if sql_tool:
+            tools.extend([sql_tool, chart_tool])
+        if search_tool:
+            tools.append(search_tool)
+        if employee_tool.sql_runner.can_access:
+            tools.append(employee_tool)
+
     return tools
 
 
-def register_tools(registry: ToolRegistry, mode: str) -> None:
-    for tool in build_tools(mode):
+def register_tools(registry: ToolRegistry, mode: str, user_role: str = "viewer") -> None:
+    """注册工具到 registry。
+
+    Args:
+        registry: Vanna ToolRegistry
+        mode: 模式 - "rag", "sql", "hybrid"
+        user_role: 用户角色
+    """
+    for tool in build_tools(mode, user_role):
         registry.register_local_tool(tool, access_groups=[])
 
-    # 可选：注册可视化工具，需搭配 run_sql 生成的 CSV 文件
-    # from vanna.tools.visualize_data import VisualizeDataTool
-    # registry.register_local_tool(VisualizeDataTool(), access_groups=[])
 
-
-__all__ = ["build_tools", "SearchArticlesTool", "FinanceChartTool", "register_tools"]
+__all__ = [
+    "build_tools",
+    "SearchArticlesTool",
+    "FinanceChartTool",
+    "EmployeeQueryTool",
+    "register_tools",
+]

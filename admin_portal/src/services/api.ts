@@ -6,6 +6,7 @@ import type {
   ArticleCategory,
   ArticleDetail,
 } from "@/types/api";
+import { getToken } from "./auth";
 
 const DEFAULT_BASE = "http://localhost:8000";
 const API_BASE_URL = (import.meta.env.VITE_API_BASE || DEFAULT_BASE).replace(/\/$/, "");
@@ -23,11 +24,19 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     });
   }
 
+  // Add auth token if available
+  const token = getToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options.headers as Record<string, string>),
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const response = await fetch(url, {
-    headers: {
-      "Content-Type": "application/json",
-    },
     ...options,
+    headers,
   });
   if (!response.ok) {
     throw new Error(`请求失败：${response.status}`);

@@ -63,6 +63,22 @@ class LoggingToolRegistry(ToolRegistry):
                     "title": result.metadata.get("title"),
                 })
 
+        # 检测 DataFrame 数据（员工查询结果等）
+        if result.metadata:
+            results = result.metadata.get("results")
+            columns = result.metadata.get("columns")
+            if results is not None and columns is not None:
+                self._pending_components.append({
+                    "type": "dataframe",
+                    "data": {
+                        "columns": columns,
+                        "rows": results,
+                        "row_count": len(results),
+                        "column_labels": result.metadata.get("column_labels"),
+                    },
+                    "title": result.metadata.get("title", "查询结果"),
+                })
+
         # 清理记录（不暴露原始数据给前端）
         record = {
             "tool_name": tool_call.name,

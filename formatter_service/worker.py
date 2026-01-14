@@ -399,3 +399,44 @@ def _apply_article(target: orm_models.ArticleORM, article: Article) -> None:
 def _derive_base_url(url: str) -> str:
     parsed = urlparse(str(url))
     return f"{parsed.scheme}://{parsed.netloc}" if parsed.scheme else str(url)
+
+
+# --------- Employee import task ---------
+
+
+@celery_app.task(name="formatter.employee_import", queue=FORMATTER_QUEUE)
+def task_employee_import(
+    file_path: str,
+    company_no: str,
+    sheet_name: Optional[str] = None,
+) -> dict:
+    """Import employees from Excel file.
+
+    Args:
+        file_path: Path to the uploaded Excel file.
+        company_no: Company code (e.g., ydjyhb).
+        sheet_name: Sheet name to import (optional, defaults to first sheet).
+
+    Returns:
+        Import statistics {status, total, inserted, updated, skipped}.
+    """
+    try:
+        # Import here to avoid circular imports
+        from scripts.import_employees import import_employees as do_import
+
+        stats = do_import(
+            excel_path=file_path,
+            company_no=company_no,
+            sheet_name=sheet_name,
+            dry_run=False,
+        )
+
+        # Clean up temp file after successful import
+        try:
+            Path(file_path).unlink(missing_ok=True)
+        except Exception:
+            pass  # Ignore cleanup errors
+
+        return {"status": "ok", **stats}
+    except Exception as exc:
+        return {"status": "error", "error": str(exc)}
