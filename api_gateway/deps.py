@@ -109,8 +109,8 @@ def require_roles(*roles: str) -> Callable:
         async def admin_endpoint(user = Depends(require_roles("admin"))):
             ...
 
-        @router.get("/hr")
-        async def hr_endpoint(user = Depends(require_roles("admin", "hr_manager"))):
+        @router.get("/employee")
+        async def employee_endpoint(user = Depends(require_roles(Roles.ADMIN))):
             ...
     """
     def role_checker(

@@ -63,8 +63,22 @@ class LoggingToolRegistry(ToolRegistry):
                     "title": result.metadata.get("title"),
                 })
 
+        # 🔧 检测聚合结果（COUNT/SUM/AVG等统计查询）
+        if result.metadata and result.metadata.get("is_aggregate"):
+            agg_data = result.metadata.get("aggregate_result")
+            if agg_data:
+                self._pending_components.append({
+                    "type": "aggregate_result",
+                    "data": {
+                        "label": agg_data["label"],
+                        "value": agg_data["value"],
+                        "format": "number",  # 可扩展：percent, currency等
+                    },
+                    "title": "统计结果",
+                })
+
         # 检测 DataFrame 数据（员工查询结果等）
-        if result.metadata:
+        elif result.metadata:
             results = result.metadata.get("results")
             columns = result.metadata.get("columns")
             if results is not None and columns is not None:

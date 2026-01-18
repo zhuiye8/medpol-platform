@@ -6,7 +6,10 @@
  */
 import { useState, useEffect } from "react";
 
-const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
+const DEFAULT_API_BASE =
+  import.meta.env.VITE_PUBLIC_CHAT_API_BASE ||
+  import.meta.env.VITE_API_BASE ||
+  "http://localhost:8000";
 
 interface ArticleDetail {
   id: string;

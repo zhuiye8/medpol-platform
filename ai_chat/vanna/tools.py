@@ -3,8 +3,13 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import date, datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
+
+import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 def _json_serial(obj):
@@ -49,6 +54,12 @@ class ChartArgs(BaseModel):
         default=None,
         description="仅当用户明确要求多种图表时使用。默认只生成一个图表。"
     )
+
+
+class EmployeeChartArgs(BaseModel):
+    """员工图表生成参数"""
+    chart_type: Optional[str] = Field(default=None, description="图表类型: bar(柱状图), pie(饼图)")
+    title: Optional[str] = Field(default=None, description="图表标题")
 
 
 # 员工表字段 -> 中文显示名映射
@@ -515,18 +526,202 @@ class FinanceChartTool(Tool[ChartArgs]):
         return str(val)
 
 
+class EmployeeChartTool(Tool[EmployeeChartArgs]):
+    """基于最近的员工统计查询生成图表"""
+
+    @property
+    def name(self) -> str:
+        return "generate_employee_chart"
+
+    @property
+    def description(self) -> str:
+        return "基于最近的员工统计查询（GROUP BY）生成可视化图表（柱状图/饼图）"
+
+    def get_args_schema(self):
+        return EmployeeChartArgs
+
+    async def execute(self, context: ToolContext, args: EmployeeChartArgs) -> ToolResult:
+        # 1. 从context.metadata["tool_log"]获取最近的查询结果
+        last_tool_result = self._get_last_employee_query_result(context)
+
+        if not last_tool_result:
+            return ToolResult(
+                success=False,
+                error="未找到员工查询结果，请先调用 query_employees 获取数据。"
+            )
+
+        results = last_tool_result.get("results", [])
+        columns = last_tool_result.get("columns", [])
+        chart_hint = last_tool_result.get("chart_hint", {})
+
+        if not results or not columns:
+            return ToolResult(success=False, error="查询结果为空，无法生成图表。")
+
+        # 2. 确定图表类型
+        chart_type = args.chart_type or chart_hint.get("recommended_type", "bar")
+        title = args.title or "员工统计图表"
+
+        # 3. 构建Plotly配置
+        chart_config = self._build_plotly_config(
+            results,
+            columns,
+            chart_type,
+            title,
+            chart_hint
+        )
+
+        # 4. 返回图表metadata
+        return ToolResult(
+            success=True,
+            result_for_llm=f"已生成{chart_type}图表，展示员工统计数据。",
+            metadata={
+                "charts": [{
+                    "chart_type": chart_type,
+                    "config": chart_config,
+                    "title": title
+                }]
+            }
+        )
+
+    def _get_last_employee_query_result(self, context: ToolContext) -> Optional[Dict]:
+        """从tool_log中获取最近的员工查询结果"""
+        if "tool_log" not in context.metadata:
+            return None
+
+        # 倒序查找最近的 query_employees 调用
+        for log_entry in reversed(context.metadata["tool_log"]):
+            if log_entry.get("tool_name") == "query_employees":
+                return log_entry.get("metadata", {})
+
+        return None
+
+    def _build_plotly_config(self, results: List[Dict], columns: List[str], chart_type: str,
+                            title: str, chart_hint: Dict) -> Dict[str, Any]:
+        """构建Plotly图表配置（参考FinanceChartTool的实现）"""
+
+        dimension_cols = chart_hint.get("dimension_cols", [])
+        metric_cols = chart_hint.get("metric_cols", [])
+
+        # 回退：自动识别
+        if not dimension_cols or not metric_cols:
+            for col in columns:
+                col_lower = col.lower()
+                if any(name in col_lower for name in ['count', 'sum', 'avg', 'total', 'max', 'min']):
+                    metric_cols.append(col)
+                else:
+                    dimension_cols.append(col)
+
+        # 柱状图：维度在X轴，指标在Y轴
+        if chart_type == "bar":
+            return self._build_bar_chart(results, dimension_cols[0] if dimension_cols else columns[0],
+                                         metric_cols if metric_cols else [columns[-1]], title)
+
+        # 饼图：只显示一个指标的分布
+        elif chart_type == "pie":
+            return self._build_pie_chart(results, dimension_cols[0] if dimension_cols else columns[0],
+                                         metric_cols[0] if metric_cols else columns[-1], title)
+
+        # 默认柱状图
+        else:
+            return self._build_bar_chart(results, dimension_cols[0] if dimension_cols else columns[0],
+                                         metric_cols if metric_cols else [columns[-1]], title)
+
+    def _build_bar_chart(self, results: List[Dict], x_col: str, y_cols: List[str], title: str) -> Dict[str, Any]:
+        """构建柱状图配置"""
+        colors = [
+            "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899",
+            "#06b6d4", "#84cc16", "#f97316", "#6366f1", "#14b8a6", "#a855f7",
+        ]
+
+        traces = []
+
+        for i, y_col in enumerate(y_cols):
+            # 获取列的中文名
+            y_label = EMPLOYEE_COLUMN_LABELS.get(y_col, y_col)
+
+            traces.append({
+                "type": "bar",
+                "name": y_label,
+                "x": [str(row.get(x_col, "")) for row in results],
+                "y": [float(row.get(y_col, 0) or 0) for row in results],
+                "marker": {"color": colors[i % len(colors)]},
+            })
+
+        # 获取X轴列的中文名
+        x_label = EMPLOYEE_COLUMN_LABELS.get(x_col, x_col)
+
+        return {
+            "data": traces,
+            "layout": {
+                "title": {"text": title, "font": {"size": 14}},
+                "xaxis": {
+                    "title": {"text": x_label},
+                    "tickangle": -45 if len(results) > 6 else (-30 if len(results) > 4 else 0),
+                    "tickfont": {"size": 10},
+                },
+                "yaxis": {"title": {"text": "数量"}, "tickfont": {"size": 10}},
+                "barmode": "group" if len(y_cols) > 1 else "relative",
+                "showlegend": len(y_cols) > 1,
+                "hovermode": "x unified",
+                "margin": {"l": 50, "r": 20, "t": 40, "b": 100},
+            }
+        }
+
+    def _build_pie_chart(self, results: List[Dict], label_col: str, value_col: str, title: str) -> Dict[str, Any]:
+        """构建饼图配置"""
+        colors = [
+            "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899",
+            "#06b6d4", "#84cc16", "#f97316", "#6366f1", "#14b8a6", "#a855f7",
+        ]
+
+        labels = [str(row.get(label_col, "")) for row in results]
+        values = [float(row.get(value_col, 0) or 0) for row in results]
+
+        return {
+            "data": [{
+                "type": "pie",
+                "labels": labels,
+                "values": values,
+                "hole": 0.4,
+                "textinfo": "label+percent",
+                "hovertemplate": "%{label}<br>%{value}<extra></extra>",
+                "marker": {"colors": colors[:len(labels)]},
+            }],
+            "layout": {
+                "title": {"text": title, "font": {"size": 14}},
+                "showlegend": True,
+                "legend": {
+                    "orientation": "v",
+                    "x": 1.02,
+                    "y": 1,
+                    "xanchor": "left",
+                    "font": {"size": 10}
+                },
+                "margin": {"l": 20, "r": 120, "t": 40, "b": 20},
+            }
+        }
+
+
 class EmployeeQueryTool(Tool[EmployeeQueryArgs]):
     """员工数据查询工具，带权限控制。
 
     根据用户角色自动选择合适的视图：
-    - admin, hr_manager: 可见全部字段（含敏感信息）
-    - hr_viewer: 仅可见基础字段（不含身份证、电话）
-    - 其他角色: 无权访问
+    - admin: 可见全部字段（含身份证号、电话等敏感信息）
+    - viewer: 仅可见基础字段（不含身份证、电话）
+    - finance: 无权访问员工数据
     """
 
     def __init__(self, user_role: str):
+        # 🔍 诊断日志：工具初始化
+        logger.info(f"🔍 [EmployeeQueryTool] Initializing with user_role='{user_role}'")
+
         self.user_role = user_role
         self.sql_runner = EmployeeSqlRunner(user_role)
+
+        # 🔍 诊断日志：SqlRunner 状态
+        logger.info(f"✓ [EmployeeQueryTool] SqlRunner initialized:")
+        logger.info(f"  - target_view: {self.sql_runner.target_view}")
+        logger.info(f"  - can_access: {self.sql_runner.can_access}")
 
     @property
     def name(self) -> str:
@@ -538,13 +733,36 @@ class EmployeeQueryTool(Tool[EmployeeQueryArgs]):
             return "员工数据查询（当前角色无权访问）"
 
         schema_desc = self.sql_runner.get_schema_description()
-        return f"查询员工数据（姓名、部门、职务、学历等）。\n{schema_desc}"
+
+        # 根据角色生成不同的表名指导
+        if self.user_role in {Roles.ADMIN}:
+            table_name = "employees"
+            table_note = "使用完整表 employees，可查询包括 phone（电话）、id_number（身份证号）在内的全部字段"
+        else:
+            table_name = "employees_basic"
+            table_note = "使用基础视图 employees_basic，仅可查询基础字段（不含敏感信息）"
+
+        return f"""查询员工数据（姓名、部门、职务、学历等）。
+
+{schema_desc}
+
+重要说明:
+- 表名: {table_name}
+- 权限: {table_note}
+- 查询公司员工时，务必使用 ILIKE 模糊匹配: WHERE company_name ILIKE '%关键词%'
+- 示例: SELECT name, department, position FROM {table_name} WHERE company_name ILIKE '%联环%' LIMIT 20
+"""
 
     def get_args_schema(self):
         return EmployeeQueryArgs
 
     async def execute(self, context: ToolContext, args: EmployeeQueryArgs) -> ToolResult:
+        # 🔍 诊断日志：工具调用
+        logger.info(f"[EmployeeQueryTool] Called with SQL: {args.sql}")
+        logger.info(f"[EmployeeQueryTool] User role: {self.user_role}, Can access: {self.sql_runner.can_access}")
+
         if not self.sql_runner.can_access:
+            logger.warning(f"[EmployeeQueryTool] Access denied for role {self.user_role}")
             return ToolResult(
                 success=False,
                 error=f"角色 {self.user_role} 无权访问员工数据"
@@ -555,14 +773,86 @@ class EmployeeQueryTool(Tool[EmployeeQueryArgs]):
             sql_args = RunSqlToolArgs(sql=args.sql)
             df = await self.sql_runner.run_sql(sql_args, context)
 
+            # 🔍 诊断日志：SQL 执行结果
+            logger.info(f"[EmployeeQueryTool] SQL execution returned {len(df)} rows")
+
             # 构建结果
             if df.empty:
+                logger.warning("[EmployeeQueryTool] Empty result, returning empty response")
                 return ToolResult(
                     success=True,
                     result_for_llm="查询结果为空，没有找到符合条件的员工记录。",
                     metadata={}  # 不返回 results/columns，避免创建空表格组件
                 )
 
+            # 🔧 检测聚合查询类型
+            is_aggregate, agg_type = self._detect_aggregate_type(args.sql, df)
+
+            # 场景1: 单值聚合（COUNT(*) → 1行1列）
+            if is_aggregate and agg_type == "single_value":
+                agg_col = df.columns[0]
+                agg_value = df.iloc[0][agg_col]
+
+                logger.info(f"[EmployeeQueryTool] Detected single value aggregate: {agg_col}={agg_value}")
+
+                # 🔧 将numpy类型转换为Python原生类型（解决JSON序列化问题）
+                if hasattr(agg_value, 'item'):
+                    python_value = agg_value.item()
+                else:
+                    python_value = agg_value
+
+                return ToolResult(
+                    success=True,
+                    result_for_llm=f"统计结果：{self._translate_column(agg_col)}为 {python_value}。",
+                    metadata={
+                        "aggregate_result": {
+                            "label": self._translate_column(agg_col),
+                            "value": python_value,
+                            "raw_column": agg_col,
+                        },
+                        "is_aggregate": True,
+                        "aggregate_type": "single_value",
+                    }
+                )
+
+            # 场景2: GROUP BY统计（多行，含聚合列）
+            elif is_aggregate and agg_type == "grouped_stats":
+                logger.info(f"[EmployeeQueryTool] Detected grouped statistics with {len(df)} rows")
+
+                # 识别维度列和指标列
+                dimension_cols, metric_cols = self._identify_columns(df, args.sql)
+
+                logger.info(f"[EmployeeQueryTool] Dimension cols: {dimension_cols}, Metric cols: {metric_cols}")
+
+                # 过滤隐藏字段
+                hidden_columns = {"id", "raw_data", "created_at", "updated_at"}
+                columns = [col for col in df.columns if col not in hidden_columns]
+                results = [
+                    {k: v for k, v in row.items() if k not in hidden_columns}
+                    for row in df.to_dict(orient="records")
+                ]
+
+                # 生成中文列名映射
+                column_labels = {col: EMPLOYEE_COLUMN_LABELS.get(col, col) for col in columns}
+
+                return ToolResult(
+                    success=True,
+                    result_for_llm=f"查询到 {len(results)} 个分组的统计数据，已生成数据表。建议调用 generate_employee_chart 工具可视化展示。",
+                    metadata={
+                        "results": results,
+                        "columns": columns,
+                        "column_labels": column_labels,
+                        "is_aggregate": True,
+                        "aggregate_type": "grouped_stats",
+                        "chart_hint": {
+                            "recommended_type": self._recommend_chart_type(df, dimension_cols, metric_cols),
+                            "dimension_cols": dimension_cols,
+                            "metric_cols": metric_cols,
+                        },
+                    }
+                )
+
+            # 明细查询：正常返回
             # 转换为列表格式，过滤掉内部字段
             hidden_columns = {"id", "raw_data", "created_at", "updated_at"}
             columns = [col for col in df.columns if col not in hidden_columns]
@@ -587,6 +877,10 @@ class EmployeeQueryTool(Tool[EmployeeQueryArgs]):
             if len(results) > 10:
                 data_summary += f"\n... 共 {len(results)} 条记录"
 
+            # 🔍 诊断日志：返回结果
+            logger.info(f"[EmployeeQueryTool] Returning {len(results)} records with {len(columns)} columns")
+            logger.info(f"[EmployeeQueryTool] Columns: {columns}")
+
             return ToolResult(
                 success=True,
                 result_for_llm=(
@@ -599,6 +893,7 @@ class EmployeeQueryTool(Tool[EmployeeQueryArgs]):
                     "column_labels": column_labels,
                     "total": len(results),
                     "title": "员工查询结果",
+                    "is_aggregate": False,
                 }
             )
 
@@ -608,6 +903,92 @@ class EmployeeQueryTool(Tool[EmployeeQueryArgs]):
             return ToolResult(success=False, error=str(e))
         except Exception as e:
             return ToolResult(success=False, error=f"查询出错: {str(e)}")
+
+    def _detect_aggregate_type(self, sql: str, df: pd.DataFrame) -> Tuple[bool, str]:
+        """检测聚合查询类型。
+
+        返回:
+            (is_aggregate, aggregate_type)
+            - is_aggregate: bool - 是否是聚合查询
+            - aggregate_type: str - "single_value"（单值聚合）, "grouped_stats"（分组统计）, "none"（明细查询）
+        """
+        sql_lower = sql.lower()
+
+        # 检测聚合函数
+        has_agg_func = any(f in sql_lower for f in ['count(', 'sum(', 'avg(', 'max(', 'min('])
+
+        # 检测列名中的聚合标识
+        agg_cols = {'count', 'sum', 'avg', 'max', 'min', 'total', 'average'}
+        has_agg_col = any(col.lower() in agg_cols for col in df.columns)
+
+        # 检测 GROUP BY 关键字
+        has_group_by = 'group by' in sql_lower
+
+        # 场景1: 单行结果 + 聚合函数/列名 → 单值聚合（如 COUNT(*) → 1行）
+        if len(df) == 1 and (has_agg_func or has_agg_col):
+            return True, "single_value"
+
+        # 场景2: 多行结果 + GROUP BY + 聚合函数/列名 → 统计分组（如 GROUP BY company_name）
+        if len(df) > 1 and has_group_by and (has_agg_func or has_agg_col):
+            return True, "grouped_stats"
+
+        return False, "none"
+
+    def _is_aggregate_query(self, sql: str, df: pd.DataFrame) -> bool:
+        """检测是否是聚合查询（兼容旧接口）。"""
+        is_agg, _ = self._detect_aggregate_type(sql, df)
+        return is_agg
+
+    def _translate_column(self, col: str) -> str:
+        """翻译聚合列名为中文。"""
+        translations = {
+            'count': '数量',
+            'sum': '总和',
+            'avg': '平均值',
+            'average': '平均值',
+            'max': '最大值',
+            'min': '最小值',
+            'total': '总计',
+        }
+        return translations.get(col.lower(), col)
+
+    def _identify_columns(self, df: pd.DataFrame, sql: str) -> Tuple[List[str], List[str]]:
+        """识别维度列（分组键）和指标列（聚合值）。
+
+        返回:
+            (dimension_cols, metric_cols)
+        """
+        dimension_cols = []
+        metric_cols = []
+
+        for col in df.columns:
+            col_lower = col.lower()
+            # 指标列特征：聚合函数名 或 数值类型
+            if any(name in col_lower for name in ['count', 'sum', 'avg', 'total', 'max', 'min', 'bachelor_count']):
+                metric_cols.append(col)
+            # 维度列：非聚合的列
+            else:
+                dimension_cols.append(col)
+
+        return dimension_cols, metric_cols
+
+    def _recommend_chart_type(self, df: pd.DataFrame, dimension_cols: List[str], metric_cols: List[str]) -> str:
+        """根据数据特征推荐图表类型。"""
+        # 单维度 + 单指标 → 饼图或柱状图
+        if len(dimension_cols) == 1 and len(metric_cols) == 1:
+            # 如果维度是公司/部门，推荐柱状图
+            dim_col = dimension_cols[0].lower()
+            if 'company' in dim_col or 'department' in dim_col:
+                return "bar"
+            # 如果是分类（如学历），推荐饼图
+            return "pie"
+
+        # 单维度 + 多指标 → 分组柱状图
+        elif len(dimension_cols) == 1 and len(metric_cols) > 1:
+            return "bar"
+
+        # 默认柱状图
+        return "bar"
 
 
 def build_tools(mode: str, user_role: str = "viewer") -> List[Tool]:
@@ -646,6 +1027,7 @@ def build_tools(mode: str, user_role: str = "viewer") -> List[Tool]:
 
     # 员工查询工具（admin 和 viewer 可用，finance 不可用）
     employee_tool = EmployeeQueryTool(user_role)
+    employee_chart_tool = EmployeeChartTool()
 
     # 根据模式组合工具
     if mode == "sql":
@@ -658,6 +1040,7 @@ def build_tools(mode: str, user_role: str = "viewer") -> List[Tool]:
             tools.append(search_tool)
         if employee_tool.sql_runner.can_access:
             tools.append(employee_tool)
+            tools.append(employee_chart_tool)
     else:  # hybrid 模式：全部工具（admin 角色）
         if sql_tool:
             tools.extend([sql_tool, chart_tool])
@@ -665,6 +1048,7 @@ def build_tools(mode: str, user_role: str = "viewer") -> List[Tool]:
             tools.append(search_tool)
         if employee_tool.sql_runner.can_access:
             tools.append(employee_tool)
+            tools.append(employee_chart_tool)
 
     return tools
 
@@ -685,6 +1069,7 @@ __all__ = [
     "build_tools",
     "SearchArticlesTool",
     "FinanceChartTool",
+    "EmployeeChartTool",
     "EmployeeQueryTool",
     "register_tools",
 ]

@@ -2,14 +2,14 @@
  * useAuth - 访问码认证钩子
  *
  * 功能：
- * - 验证访问码（与环境变量对比）
+ * - 验证访问码（前端仅验证非空，真正权限验证由后端完成）
  * - 认证状态存储在 sessionStorage（关闭浏览器后失效）
- * - 默认访问码：nature@lianhuan
+ * - 访问码存储供后续请求使用
  */
 import { useState, useCallback, useEffect } from "react";
 
 const AUTH_STORAGE_KEY = "medpol_chat_auth";
-const ACCESS_CODE = import.meta.env.VITE_ACCESS_CODE || "nature@lianhuan";
+const ACCESS_CODE_STORAGE_KEY = "medpol_access_code";
 
 function getStoredAuth(): boolean {
   try {
@@ -45,9 +45,12 @@ export function useAuth() {
   }, []);
 
   const verify = useCallback((code: string): boolean => {
-    const isValid = code === ACCESS_CODE;
+    // 前端只验证非空，真正的权限验证由后端完成
+    const isValid = code.trim().length > 0;
     if (isValid) {
       setIsAuthenticated(true);
+      // 存储访问码，供后续聊天请求使用
+      sessionStorage.setItem(ACCESS_CODE_STORAGE_KEY, code.trim());
       setStoredAuth(true);
     }
     return isValid;
@@ -56,6 +59,8 @@ export function useAuth() {
   const logout = useCallback(() => {
     setIsAuthenticated(false);
     setStoredAuth(false);
+    // 清空访问码
+    sessionStorage.removeItem(ACCESS_CODE_STORAGE_KEY);
   }, []);
 
   return {

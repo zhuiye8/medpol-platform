@@ -413,14 +413,14 @@ def _derive_base_url(url: str) -> str:
 @celery_app.task(name="formatter.employee_import", queue=FORMATTER_QUEUE)
 def task_employee_import(
     file_path: str,
-    company_no: str,
+    company_name: str,
     sheet_name: Optional[str] = None,
 ) -> dict:
     """Import employees from Excel file.
 
     Args:
         file_path: Path to the uploaded Excel file.
-        company_no: Company code (e.g., ydjyhb).
+        company_name: Company standard full name (e.g., "扬州扬大联环药业基因工程有限公司").
         sheet_name: Sheet name to import (optional, defaults to first sheet).
 
     Returns:
@@ -432,7 +432,7 @@ def task_employee_import(
 
         stats = do_import(
             excel_path=file_path,
-            company_no=company_no,
+            company_name=company_name,
             sheet_name=sheet_name,
             dry_run=False,
         )
@@ -445,4 +445,55 @@ def task_employee_import(
 
         return {"status": "ok", **stats}
     except Exception as exc:
+        return {"status": "error", "error": str(exc)}
+
+
+@celery_app.task(name="formatter.batch_employee_import", queue=FORMATTER_QUEUE)
+def task_batch_employee_import(
+    file_path: str,
+    start_sheet_index: int = 1,
+    end_sheet_index: Optional[int] = None,
+    skip_validation: bool = False
+) -> dict:
+    """Batch import employees from multiple sheets.
+
+    Args:
+        file_path: Path to the uploaded Excel file.
+        start_sheet_index: Starting sheet index (default 1, skips first sheet).
+        end_sheet_index: Ending sheet index (optional, imports to end if not specified).
+        skip_validation: Skip validation (default False).
+
+    Returns:
+        Batch import summary {status, total_sheets, success_sheets, failed_sheets, results, errors}.
+    """
+    try:
+        # Import here to avoid circular imports
+        from scripts.import_employees import batch_import_from_roster
+
+        summary = batch_import_from_roster(
+            excel_path=file_path,
+            start_sheet_index=start_sheet_index,
+            end_sheet_index=end_sheet_index,
+            dry_run=False,
+            skip_validation=skip_validation
+        )
+
+        # Clean up temp file after successful import
+        try:
+            Path(file_path).unlink(missing_ok=True)
+        except Exception:
+            pass  # Ignore cleanup errors
+
+        return {
+            "status": "ok",
+            "total_sheets": summary["total_sheets"],
+            "success_sheets": summary["success_sheets"],
+            "failed_sheets": summary["failed_sheets"],
+            "skipped_sheets": summary["skipped_sheets"],
+            "results": summary["results"],
+            "errors": summary["errors"],
+        }
+
+    except Exception as exc:
+        logger.exception("Batch employee import failed")
         return {"status": "error", "error": str(exc)}

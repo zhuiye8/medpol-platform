@@ -121,33 +121,67 @@ export async function fetchTaskStatus(taskId: string): Promise<TaskStatus> {
   return unwrap(resp);
 }
 
-// ==================== Employee Import APIs ====================
+// ==================== Employee Data Query APIs ====================
 
 import type {
-  CompanyOption,
+  BatchImportRequest,
+  BatchImportResponse,
+  CompanyStats,
+  Employee,
+  EmployeeListResponse,
   EmployeePreviewData,
   EmployeeStats,
+  FileUploadResult,
+  ImportTaskResult,
+  SingleImportRequest,
 } from "@/types/admin";
 import { getToken } from "./auth";
 
 const DEFAULT_BASE = "http://localhost:8000";
 const API_BASE_URL = (import.meta.env.VITE_API_BASE || DEFAULT_BASE).replace(/\/$/, "");
 
-export async function fetchEmployeeCompanies(): Promise<CompanyOption[]> {
-  const resp = await apiRequest<AdminResp<CompanyOption[]>>("/v1/admin/employees/companies");
+/**
+ * Get employee list (paginated).
+ */
+export async function fetchEmployees(params: {
+  page?: number;
+  page_size?: number;
+  company_name?: string;
+  keyword?: string;
+}): Promise<EmployeeListResponse> {
+  const resp = await apiRequest<AdminResp<EmployeeListResponse>>("/v1/admin/employees", {
+    query: {
+      page: params.page,
+      page_size: params.page_size,
+      company_name: params.company_name,
+      keyword: params.keyword,
+    },
+  });
   return unwrap(resp);
 }
 
+/**
+ * Get company statistics (extracted from imported employee data).
+ */
+export async function fetchEmployeeCompanies(): Promise<CompanyStats[]> {
+  const resp = await apiRequest<AdminResp<CompanyStats[]>>("/v1/admin/employees/companies");
+  return unwrap(resp);
+}
+
+/**
+ * Get employee statistics.
+ */
 export async function fetchEmployeeStats(): Promise<EmployeeStats> {
   const resp = await apiRequest<AdminResp<EmployeeStats>>("/v1/admin/employees/stats");
   return unwrap(resp);
 }
 
-export async function uploadEmployeeFile(file: File): Promise<{
-  file_id: string;
-  filename: string;
-  size: number;
-}> {
+// ==================== Employee Import APIs ====================
+
+/**
+ * Upload Excel file for import.
+ */
+export async function uploadEmployeeFile(file: File): Promise<FileUploadResult> {
   const formData = new FormData();
   formData.append("file", file);
 
@@ -171,6 +205,9 @@ export async function uploadEmployeeFile(file: File): Promise<{
   return unwrap(json);
 }
 
+/**
+ * Get sheet list from uploaded file.
+ */
 export async function fetchEmployeeSheets(fileId: string): Promise<string[]> {
   const resp = await apiRequest<AdminResp<string[]>>(
     `/v1/admin/employees/preview/${fileId}/sheets`
@@ -178,9 +215,12 @@ export async function fetchEmployeeSheets(fileId: string): Promise<string[]> {
   return unwrap(resp);
 }
 
+/**
+ * Preview employee data from uploaded file.
+ * Auto-detects company name, no longer requires company_no parameter.
+ */
 export async function fetchEmployeePreview(
   fileId: string,
-  companyNo: string,
   sheetName?: string,
   limit = 50
 ): Promise<EmployeePreviewData> {
@@ -188,7 +228,6 @@ export async function fetchEmployeePreview(
     `/v1/admin/employees/preview/${fileId}`,
     {
       query: {
-        company_no: companyNo,
         sheet_name: sheetName,
         limit,
       },
@@ -197,24 +236,47 @@ export async function fetchEmployeePreview(
   return unwrap(resp);
 }
 
-export async function triggerEmployeeImport(params: {
-  file_id: string;
-  company_no: string;
-  sheet_name?: string;
-}): Promise<{ task_id: string }> {
-  const resp = await apiRequest<AdminResp<{ task_id: string }>>(
+/**
+ * Import single sheet of employee data.
+ */
+export async function importSingleSheet(
+  request: SingleImportRequest
+): Promise<{ task_id: string; company_name: string }> {
+  const resp = await apiRequest<AdminResp<{ task_id: string; company_name: string }>>(
     "/v1/admin/employees/import",
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(params),
+      body: JSON.stringify(request),
     }
   );
   return unwrap(resp);
 }
 
-export async function fetchEmployeeTaskStatus(taskId: string): Promise<TaskStatus> {
-  const resp = await apiRequest<AdminResp<TaskStatus>>(
+/**
+ * Batch import multiple sheets (full roster mode).
+ */
+export async function batchImportEmployees(
+  request: BatchImportRequest
+): Promise<BatchImportResponse> {
+  const resp = await apiRequest<AdminResp<BatchImportResponse>>(
+    "/v1/admin/employees/batch-import",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request),
+    }
+  );
+  return unwrap(resp);
+}
+
+/**
+ * Get employee import task status.
+ */
+export async function fetchEmployeeTaskStatus(
+  taskId: string
+): Promise<{ task_id: string; state: string; result: ImportTaskResult }> {
+  const resp = await apiRequest<AdminResp<{ task_id: string; state: string; result: ImportTaskResult }>>(
     `/v1/admin/employees/tasks/${taskId}`
   );
   return unwrap(resp);

@@ -169,15 +169,15 @@ async def chat(
 
     # Authentication priority:
     # 1. JWT Bearer token -> use JWT roles
-    # 2. embed_auth_token query param -> role based on mode (mobile compatibility)
+    # 2. embed_auth_token query param -> role based on token type (admin_portal or public_chat)
     # 3. No auth -> viewer role (PC public_chat)
     if credentials is not None:
         # JWT authentication - extract user roles
         user_info = _get_user_from_token(credentials)
         user_role = user_info.get("user_role", Roles.VIEWER)
     elif _verify_token(token):
-        # Embed token auth - role based on mode (mobile app compatibility)
-        user_role = _get_role_by_mode(mode)
+        # Embed token auth - role based on token type (EMBED_AUTH_TOKEN or access code)
+        user_role = _get_role_by_token(token, mode)
         user_info = {
             "user_id": "embed_user",
             "username": "embed_user",
@@ -250,16 +250,29 @@ def _verify_token(token: Optional[str]) -> bool:
 
     Returns True if:
     - No EMBED_AUTH_TOKEN configured (open access)
-    - Token matches EMBED_AUTH_TOKEN
+    - Token matches EMBED_AUTH_TOKEN (admin_portal scenario)
+    - Token exists in ACCESS_CODE_ROLES mapping (public_chat scenario)
     """
     settings = get_settings()
+
+    # Case 1: No EMBED_AUTH_TOKEN configured, allow all requests
     if not settings.embed_auth_token:
-        # No token configured, allow all requests
         return True
-    return token == settings.embed_auth_token
+
+    # Case 2: Token matches EMBED_AUTH_TOKEN (admin_portal)
+    if token == settings.embed_auth_token:
+        return True
+
+    # Case 3: Token exists in ACCESS_CODE_ROLES mapping (public_chat)
+    access_code_mapping = settings.get_access_code_role_mapping()
+    if token in access_code_mapping:
+        return True
+
+    # Case 4: Token doesn't match any valid credentials
+    return False
 
 
-# Mode to role mapping for embed token auth (mobile app compatibility)
+# Mode to role mapping for embed token auth (admin_portal compatibility)
 MODE_ROLE_MAPPING = {
     "hybrid": Roles.ADMIN,    # 全部权限：财务+员工全字段+政策
     "sql": Roles.FINANCE,     # 只有财务
@@ -267,12 +280,47 @@ MODE_ROLE_MAPPING = {
 }
 
 
-def _get_role_by_mode(mode: str) -> str:
-    """根据 mode 参数返回对应的角色。
+def _get_role_by_token(token: Optional[str], mode: str) -> str:
+    """根据 token 和 mode 参数返回对应的角色。
 
-    用于移动端 embed_token 认证时的权限分配。
+    认证逻辑（完全隔离 admin_portal 和 public_chat）：
+
+    场景 1 - admin_portal（使用 EMBED_AUTH_TOKEN）：
+      - token == EMBED_AUTH_TOKEN → 使用 mode-based 角色分配
+      - 保持原有行为，mode 参数决定角色
+
+    场景 2 - public_chat（使用访问码映射）：
+      - token 在 ACCESS_CODE_ROLES 映射中 → 使用映射的角色
+      - token 不在映射中 → 默认 viewer 角色
+
+    Args:
+        token: 访问 token（可能是 EMBED_AUTH_TOKEN 或访问码）
+        mode: 对话模式（rag/sql/hybrid）
+
+    Returns:
+        用户角色（viewer/admin/finance）
     """
-    return MODE_ROLE_MAPPING.get(mode.lower(), Roles.VIEWER)
+    settings = get_settings()
+
+    # 场景 1：admin_portal 使用统一 token（EMBED_AUTH_TOKEN）
+    if settings.embed_auth_token and token == settings.embed_auth_token:
+        # 使用 mode-based 角色分配（原逻辑，保持不变）
+        user_role = MODE_ROLE_MAPPING.get(mode.lower(), Roles.VIEWER)
+        logger.info(f"✓ [Embed Auth] Using EMBED_AUTH_TOKEN, mode-based role: mode='{mode}' → role='{user_role}'")
+        return user_role
+
+    # 场景 2：public_chat 使用访问码映射
+    access_code_mapping = settings.get_access_code_role_mapping()
+
+    if token in access_code_mapping:
+        # 访问码在映射中，使用配置的角色
+        user_role = access_code_mapping[token]
+        logger.info(f"✓ [Embed Auth] Access code '{token}' mapped to role '{user_role}'")
+        return user_role
+    else:
+        # 访问码未配置，默认 viewer 角色
+        logger.warning(f"⚠️ [Embed Auth] Access code '{token}' not in mapping, using default role 'viewer'")
+        return Roles.VIEWER
 
 
 @router.post("/chat/stream")
@@ -301,22 +349,27 @@ async def chat_stream(
     mode = (request.mode or "rag").lower()
     user_messages = request.messages or []
 
+    # 🔍 诊断日志：API层
+    logger.info(f"🔍 [API] Received chat request with mode={mode}")
+
     # Authentication priority:
     # 1. JWT Bearer token -> use JWT roles
-    # 2. embed_auth_token query param -> role based on mode (mobile compatibility)
+    # 2. embed_auth_token query param -> role based on token type (admin_portal or public_chat)
     # 3. No auth -> viewer role (PC public_chat)
     if credentials is not None:
         # JWT authentication - extract user roles
         user_info = _get_user_from_token(credentials)
         user_role = user_info.get("user_role", Roles.VIEWER)
+        logger.info(f"✓ [API] JWT auth: user_role={user_role}")
     elif _verify_token(token):
-        # Embed token auth - role based on mode (mobile app compatibility)
-        user_role = _get_role_by_mode(mode)
+        # Embed token auth - role based on token type (EMBED_AUTH_TOKEN or access code)
+        user_role = _get_role_by_token(token, mode)
         user_info = {
             "user_id": "embed_user",
             "username": "embed_user",
             "user_role": user_role,
         }
+        logger.info(f"✓ [API] Embed token auth: token='{token}', mode='{mode}' → user_role='{user_role}'")
     else:
         raise HTTPException(status_code=401, detail="Invalid or missing auth token")
 
@@ -343,6 +396,7 @@ async def chat_stream(
             await asyncio.sleep(0)
 
             # Get streaming agent with user role
+            logger.info(f"✓ [API] Creating agent: mode={mode}, user_role={user_role}")
             agent = _get_agent(mode, stream=True, user_role=user_role)
             req_context = RequestContext(metadata={
                 "mode": mode,

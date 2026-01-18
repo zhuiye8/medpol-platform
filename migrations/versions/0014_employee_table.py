@@ -46,7 +46,7 @@ def upgrade() -> None:
     op.create_index("ix_employees_employee_level", "employees", ["employee_level"])
 
     # 基础视图（不含敏感字段：id_number, phone）
-    # hr_viewer 及以下角色使用此视图
+    # viewer 角色使用此视图
     op.execute("""
         CREATE VIEW employees_basic AS
         SELECT
@@ -58,8 +58,8 @@ def upgrade() -> None:
         FROM employees;
     """)
 
-    # 完整视图（包含全部字段）
-    # hr_manager 及 admin 角色使用此视图
+    # 完整视图（包含全部字段，包括敏感字段：id_number, phone）
+    # admin 角色使用此视图
     op.execute("""
         CREATE VIEW employees_full AS
         SELECT * FROM employees;

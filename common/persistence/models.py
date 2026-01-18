@@ -366,7 +366,6 @@ class EmployeeORM(TimestampMixin, Base):
     __tablename__ = "employees"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    company_no: Mapped[str] = mapped_column(String(32), nullable=False)
     company_name: Mapped[Optional[str]] = mapped_column(String(128))
     name: Mapped[str] = mapped_column(String(64), nullable=False)
     gender: Mapped[Optional[str]] = mapped_column(String(8))

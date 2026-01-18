@@ -48,7 +48,7 @@ export interface SSETextDeltaEvent extends SSEEventBase {
 
 export interface SSEComponentEvent extends SSEEventBase {
   type: "component";
-  component_type: "dataframe" | "chart" | "search_results";
+  component_type: "dataframe" | "chart" | "search_results" | "aggregate_result";
   data: Record<string, unknown>;
   title?: string;
 }
@@ -108,6 +108,13 @@ export interface SearchResultsData {
   results: SearchResult[];
 }
 
+// 聚合结果数据（COUNT/SUM/AVG等统计查询）
+export interface AggregateResultData {
+  label: string;
+  value: number | string;
+  format?: "number" | "percent" | "currency";
+}
+
 // Chat Message Types
 export interface ChatMessage {
   id: string;
@@ -118,11 +125,11 @@ export interface ChatMessage {
   timestamp: Date;
 }
 
-export interface ChatComponent {
-  type: "dataframe" | "chart" | "search_results";
-  data: DataFrameData | ChartData | SearchResultsData;
-  title?: string;
-}
+export type ChatComponent =
+  | { type: "dataframe"; data: DataFrameData; title?: string }
+  | { type: "chart"; data: ChartData; title?: string }
+  | { type: "search_results"; data: SearchResultsData; title?: string }
+  | { type: "aggregate_result"; data: AggregateResultData; title?: string };
 
 // Hook State
 export interface ChatStreamState {

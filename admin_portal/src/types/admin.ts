@@ -85,16 +85,59 @@ export interface TaskStatus {
   result: unknown;
 }
 
-// ==================== Employee Import Types ====================
+// ==================== Employee Data Types ====================
 
-export interface CompanyOption {
-  value: string;
-  label: string;
+// Employee record
+export interface Employee {
+  id: string;
+  company_name: string;
+  name: string;
+  gender?: string;
+  department?: string;
+  position?: string;
+  employee_level?: string;
+  hire_date?: string;
+  created_at: string;
 }
 
+// Employee list response
+export interface EmployeeListResponse {
+  total: number;
+  page: number;
+  page_size: number;
+  items: Employee[];
+}
+
+// Company statistics
+export interface CompanyStats {
+  name: string;
+  count: number;
+}
+
+// Employee statistics
 export interface EmployeeStats {
   total: number;
   by_company: Record<string, number>;
+}
+
+// ==================== Employee Import Types ====================
+
+// Upload result
+export interface FileUploadResult {
+  file_id: string;
+  filename: string;
+  size: number;
+}
+
+// Preview data
+export interface EmployeePreviewData {
+  format_type: 'full_roster' | 'independent' | 'unknown';
+  company_name?: string;  // Auto-detected company name
+  total_rows: number;
+  valid_rows: number;
+  invalid_rows: number;
+  columns?: EmployeeColumn[];
+  preview: EmployeePreviewRow[];
 }
 
 export interface EmployeeColumn {
@@ -108,10 +151,56 @@ export interface EmployeePreviewRow {
   [key: string]: unknown;  // Dynamic fields
 }
 
-export interface EmployeePreviewData {
+// Single sheet import request
+export interface SingleImportRequest {
+  file_id: string;
+  sheet_name?: string;
+  company_name?: string;  // Optional, only when cannot auto-detect
+}
+
+// Batch import request
+export interface BatchImportRequest {
+  file_id: string;
+  start_sheet_index?: number;
+  end_sheet_index?: number;
+  skip_validation?: boolean;
+}
+
+// Sheet validation result
+export interface SheetValidation {
+  sheet_name: string;
+  is_valid: boolean;
+  error?: string;
+  company_name: string;
   total_rows: number;
-  valid_rows: number;
-  invalid_rows: number;
-  columns: EmployeeColumn[];
-  preview: EmployeePreviewRow[];
+}
+
+// Batch import response
+export interface BatchImportResponse {
+  task_id: string;
+  total_sheets: number;
+  valid_sheets: number;
+  validation_results: SheetValidation[];
+}
+
+// Import task result
+export interface ImportTaskResult {
+  status: 'ok' | 'error';
+  total?: number;
+  inserted?: number;
+  updated?: number;
+  skipped?: number;
+  // Batch import additional fields
+  total_sheets?: number;
+  success_sheets?: number;
+  failed_sheets?: number;
+  skipped_sheets?: number;
+  results?: Record<string, {
+    company_name: string;
+    total: number;
+    inserted: number;
+    updated: number;
+  }>;
+  errors?: Record<string, string>;
+  error?: string;
 }

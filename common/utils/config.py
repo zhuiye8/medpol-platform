@@ -69,6 +69,13 @@ class Settings(BaseSettings):
     # --- 嵌入式聊天认证 ---
     embed_auth_token: Optional[str] = Field(default=None, validation_alias="EMBED_AUTH_TOKEN")
 
+    # --- 访问码角色映射配置 ---
+    access_code_roles: str = Field(
+        default="",
+        validation_alias="ACCESS_CODE_ROLES",
+        description="访问码角色映射，格式：code1:role1,code2:role2"
+    )
+
     # --- JWT 认证 ---
     jwt_secret_key: str = Field(
         default="medpol-secret-key-change-in-production",
@@ -76,6 +83,30 @@ class Settings(BaseSettings):
     )
     jwt_algorithm: str = Field(default="HS256", validation_alias="JWT_ALGORITHM")
     jwt_expire_minutes: int = Field(default=1440, validation_alias="JWT_EXPIRE_MINUTES")  # 24 hours
+
+    def get_access_code_role_mapping(self) -> dict[str, str]:
+        """解析访问码角色映射。
+
+        Returns:
+            dict: {access_code: role}
+
+        Examples:
+            >>> settings.access_code_roles = "nature@lianhuan:viewer,admin@lianhuan:admin"
+            >>> settings.get_access_code_role_mapping()
+            {"nature@lianhuan": "viewer", "admin@lianhuan": "admin"}
+        """
+        if not self.access_code_roles:
+            return {}
+
+        mapping = {}
+        for item in self.access_code_roles.split(","):
+            item = item.strip()
+            if ":" not in item:
+                continue
+            code, role = item.split(":", 1)
+            mapping[code.strip()] = role.strip()
+
+        return mapping
 
     model_config = SettingsConfigDict(
         case_sensitive=False,

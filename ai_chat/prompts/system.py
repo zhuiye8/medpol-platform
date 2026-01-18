@@ -11,8 +11,8 @@ from ai_chat.prompts.company_info import GROUP_INTRO, build_company_context
 
 
 # 员工数据权限角色
-EMPLOYEE_FULL_ACCESS_ROLES = {"admin", "hr_manager"}
-EMPLOYEE_BASIC_ACCESS_ROLES = {"admin", "hr_manager", "hr_viewer"}
+EMPLOYEE_FULL_ACCESS_ROLES = {"admin"}  # 只有 admin 可访问完整数据
+EMPLOYEE_BASIC_ACCESS_ROLES = {"admin", "viewer"}  # admin 和 viewer 可访问员工数据
 
 # 指标类型完整映射
 TYPE_NO_MAPPING = {
@@ -66,28 +66,81 @@ def build_employee_knowledge(user_role: str) -> str:
     )
 
     if user_role in EMPLOYEE_FULL_ACCESS_ROLES:
-        # 管理员和HR经理可见敏感字段
+        # 管理员可见敏感字段
         fields_desc = f"{base_fields}, id_number(身份证号), phone(电话号码)"
         access_note = "可查看全部员工信息（含身份证号、电话）"
+        table_instruction = "表名: employees（完整数据表，包含敏感字段）"
     else:
-        # HR查看者只能看基础字段
+        # 普通查看者只能看基础字段
         fields_desc = base_fields
         access_note = "仅可查看基础信息（不含身份证号、电话等敏感信息）"
+        table_instruction = "表名: employees_basic（基础视图，不含敏感字段）"
 
     return (
         f"【员工查询规范】\n"
-        f"表名：employees\n"
+        f"{table_instruction}\n"
         f"可用字段：{fields_desc}\n"
         f"权限说明：{access_note}\n"
-        f"公司编号：ydjyhb=扬大基因(合), lbyyhb=联博(合), plshb=普林斯(合), lhjthb=股份(合)\n"
+        f"\n"
+        f"【⭐ 重要】集团公司架构说明：\n"
+        f"数据库中的所有公司都属于联环集团体系（目前约22家公司，共1315名员工）。\n"
+        f"包括但不限于：\n"
+        f"  - 联环系公司（公司名含\"联环\"）：江苏联环健康大药房、联环药业（安庆）、扬州联环医药营销等\n"
+        f"  - 其他成员企业：四川龙一医药、江苏华天宝药业、扬州市普林斯医药科技等\n"
+        f"\n"
+        f"【集团查询策略】⭐ 关键\n"
+        f"1. 用户问\"集团\"或\"联环集团\"时：\n"
+        f"   - 理解：用户想了解集团整体情况（所有公司）\n"
+        f"   - SQL：SELECT COUNT(*) FROM employees （不加WHERE，统计全部）\n"
+        f"   - 结果：1315人（所有22家公司）\n"
+        f"   - 回答示例：\"联环集团共有1315名员工，分布在22家成员企业中\"\n"
+        f"\n"
+        f"2. 用户问具体公司时：\n"
+        f"   - 例如：\"四川龙一有多少员工？\"、\"华天宝的员工情况\"\n"
+        f"   - SQL：WHERE company_name ILIKE '%四川龙一%' 或 '%华天宝%'\n"
+        f"   - 使用ILIKE模糊匹配，因为用户通常不知道完整公司名\n"
+        f"\n"
+        f"3. 用户问\"联环\"的公司时（易混淆场景）：\n"
+        f"   - 例如：\"联环有多少员工？\"、\"联环的药房\"\n"
+        f"   - 需要判断：用户是问集团整体，还是仅问带\"联环\"字样的公司？\n"
+        f"   - 优先理解为集团整体（1315人），除非用户明确限定\"名字带联环的公司\"\n"
+        f"\n"
+        f"【聚合查询规范（COUNT/SUM/AVG/MAX/MIN）】\n"
+        f"  - 统计集团总人数：SELECT COUNT(*) as count FROM employees;\n"
+        f"  - 按学历分组：SELECT highest_education, COUNT(*) as count FROM employees GROUP BY highest_education LIMIT 100;\n"
+        f"  - 按公司分组：SELECT company_name, COUNT(*) as count FROM employees GROUP BY company_name ORDER BY count DESC LIMIT 10;\n"
+        f"注意：聚合查询结果会以大数字卡片形式展示，LLM应根据统计数值直接回答。\n"
+        f"\n"
+        f"【统计分组（GROUP BY）】\n"
+        f"  - 当用户询问\"按XXX统计\"、\"各公司...占比\"、\"分布情况\"时，使用 GROUP BY\n"
+        f"  - 限制：最多返回100个分组\n"
+        f"  - 示例：SELECT company_name, COUNT(*) as total FROM employees_basic GROUP BY company_name LIMIT 100;\n"
+        f"\n"
+        f"【图表生成】⭐ 重要\n"
+        f"  - GROUP BY统计查询后，**主动调用 generate_employee_chart** 生成可视化图表\n"
+        f"  - 图表类型选择：\n"
+        f"    * 按公司/部门统计人数 → bar（柱状图）\n"
+        f"    * 按学历/职称分布 → pie（饼图）\n"
+        f"    * 多指标对比 → bar（分组柱状图）\n"
+        f"  - 注意：\n"
+        f"    1. 必须先调用 query_employees 获取 GROUP BY 数据\n"
+        f"    2. 再调用 generate_employee_chart 生成图表\n"
+        f"    3. 默认只生成一个图表，选择最适合的类型\n"
+        f"\n"
+        f"【明细查询规范】\n"
+        f"  - 默认限制：最多返回20条记录（除非用户明确要求更多）\n"
+        f"  - 示例：SELECT name, department, position FROM employees WHERE company_name ILIKE '%四川龙一%' LIMIT 20;\n"
+        f"\n"
         f"SQL示例：\n"
+        f"  - 查询集团总人数：SELECT COUNT(*) FROM employees;\n"
         f"  - 查询部门员工：SELECT name, department, position FROM employees WHERE department = '市场部';\n"
-        f"  - 按学历统计：SELECT highest_education, COUNT(*) FROM employees GROUP BY highest_education;\n"
-        f"  - 查询公司员工：SELECT * FROM employees WHERE company_no = 'ydjyhb';\n"
+        f"  - 查询特定公司：SELECT * FROM employees WHERE company_name ILIKE '%四川龙一%';\n"
+        f"\n"
         f"注意：\n"
-        f"1. 员工数据回答时使用自然语言，如：扬大基因市场部共有5名员工\n"
+        f"1. 员工数据回答时使用自然语言，如：四川龙一医药市场部共有5名员工\n"
         f"2. 禁止暴露SQL语句和技术细节\n"
         f"3. 敏感信息（身份证、电话）仅在用户明确请求且有权限时提供\n"
+        f"4. 查询结果应明确说明统计范围，避免用户误解\n"
     )
 
 

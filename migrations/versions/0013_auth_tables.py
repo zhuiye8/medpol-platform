@@ -54,14 +54,12 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("user_id", "role_id"),
     )
 
-    # 预置角色
+    # 预置角色（只保留 admin, finance, viewer 三个核心角色）
     op.execute("""
         INSERT INTO roles (id, name, description, permissions) VALUES
-        ('role-admin', 'admin', '系统管理员，拥有全部权限', '{"employee": "full", "finance": true, "policy": true}'::jsonb),
-        ('role-hr-manager', 'hr_manager', '人力资源经理，可查看员工全部信息', '{"employee": "full", "finance": false, "policy": true}'::jsonb),
-        ('role-hr-viewer', 'hr_viewer', '人力资源查看者，只能查看员工基本信息', '{"employee": "basic", "finance": false, "policy": true}'::jsonb),
+        ('role-admin', 'admin', '系统管理员，拥有全部权限（财务+员工全字段+政策）', '{"employee": "full", "finance": true, "policy": true}'::jsonb),
         ('role-finance', 'finance', '财务人员，可查询财务数据', '{"employee": false, "finance": true, "policy": true}'::jsonb),
-        ('role-viewer', 'viewer', '普通查看者，只能检索政策', '{"employee": false, "finance": false, "policy": true}'::jsonb)
+        ('role-viewer', 'viewer', '普通查看者，可检索政策和员工基础信息（不含敏感字段）', '{"employee": "basic", "finance": false, "policy": true}'::jsonb)
     """)
 
     # 预置管理员账号 (密码: admin123，使用 bcrypt 哈希)

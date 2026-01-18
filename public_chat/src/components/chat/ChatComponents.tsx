@@ -6,7 +6,7 @@
  */
 import { useState, lazy, Suspense } from "react";
 import type { Data, Layout, Config } from "plotly.js";
-import type { DataFrameData, ChartData, SearchResult, SearchResultsData } from "./types";
+import type { DataFrameData, ChartData, SearchResult, SearchResultsData, AggregateResultData } from "./types";
 
 // Lazy load Plotly (about 3MB)
 const Plot = lazy(async () => {
@@ -63,6 +63,11 @@ function exportToCsv(columns: string[], rows: Record<string, unknown>[], title?:
 export function DataFrameRenderer({ data, title }: DataFrameProps) {
   const { columns, rows, row_count, column_labels } = data;
 
+  // 🔧 截断逻辑（防止大数据量卡顿）
+  const MAX_DISPLAY_ROWS = 500;
+  const isTruncated = rows.length > MAX_DISPLAY_ROWS;
+  const displayRows = isTruncated ? rows.slice(0, MAX_DISPLAY_ROWS) : rows;
+
   if (!columns || !rows || rows.length === 0) {
     return <div className="chat-empty">暂无数据</div>;
   }
@@ -73,6 +78,7 @@ export function DataFrameRenderer({ data, title }: DataFrameProps) {
   };
 
   const handleExport = () => {
+    // 导出时使用完整数据，不受截断影响
     exportToCsv(columns, rows, title);
   };
 
@@ -92,6 +98,16 @@ export function DataFrameRenderer({ data, title }: DataFrameProps) {
           <span className="chat-chip">共 {row_count} 条</span>
         </div>
       </div>
+
+      {/* 🔧 截断警告 */}
+      {isTruncated && (
+        <div className="chat-warning">
+          ⚠ 数据量过大，仅显示前 {MAX_DISPLAY_ROWS} 条。
+          建议添加筛选条件（如公司名称、部门）以减少结果数量。
+          点击"导出"按钮可下载完整数据。
+        </div>
+      )}
+
       <div className="chat-dataframe__wrapper">
         <table className="chat-dataframe__table">
           <thead>
@@ -102,7 +118,7 @@ export function DataFrameRenderer({ data, title }: DataFrameProps) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, i) => (
+            {displayRows.map((row, i) => (
               <tr key={i}>
                 {columns.map((col) => (
                   <td key={col}>{formatCellValue(row[col])}</td>
@@ -113,7 +129,11 @@ export function DataFrameRenderer({ data, title }: DataFrameProps) {
         </table>
       </div>
       <p className="chat-dataframe__count">
-        {rows.length < row_count ? `显示 ${rows.length} / ${row_count} 条记录` : `共${row_count} 条记录`}
+        {isTruncated
+          ? `显示 ${displayRows.length} / ${rows.length} 条（已截断）`
+          : rows.length < row_count
+            ? `显示 ${rows.length} / ${row_count} 条记录`
+            : `共 ${row_count} 条记录`}
       </p>
     </div>
   );
@@ -376,11 +396,47 @@ function SearchResultItem({ result, onViewArticle }: SearchResultItemProps) {
   );
 }
 
+// ======================== AggregateResultRenderer ========================
+
+interface AggregateResultProps {
+  data: AggregateResultData;
+  title?: string;
+}
+
+export function AggregateResultRenderer({ data, title }: AggregateResultProps) {
+  const formatValue = (value: number | string, format?: string): string => {
+    if (typeof value === "number") {
+      if (format === "percent") {
+        return `${value.toFixed(2)}%`;
+      }
+      if (format === "currency") {
+        return `¥${value.toLocaleString("zh-CN", { minimumFractionDigits: 2 })}`;
+      }
+      return value.toLocaleString("zh-CN");
+    }
+    return String(value);
+  };
+
+  return (
+    <div className="chat-card chat-aggregate">
+      <div className="chat-card__header">
+        <h4 className="chat-card__title">{title || "统计结果"}</h4>
+      </div>
+      <div className="chat-aggregate__content">
+        <div className="chat-aggregate__value">
+          {formatValue(data.value, data.format)}
+        </div>
+        <div className="chat-aggregate__label">{data.label}</div>
+      </div>
+    </div>
+  );
+}
+
 // ======================== Component Router ========================
 
 interface ChatComponentRendererProps {
-  type: "dataframe" | "chart" | "search_results";
-  data: DataFrameData | ChartData | SearchResultsData;
+  type: "dataframe" | "chart" | "search_results" | "aggregate_result";
+  data: DataFrameData | ChartData | SearchResultsData | AggregateResultData;
   title?: string;
   onViewArticle?: (articleId: string) => void;
 }
@@ -393,6 +449,8 @@ export function ChatComponentRenderer({ type, data, title, onViewArticle }: Chat
       return <ChartRenderer data={data as ChartData} title={title} />;
     case "search_results":
       return <SearchResultsRenderer data={data as SearchResultsData} onViewArticle={onViewArticle} />;
+    case "aggregate_result":
+      return <AggregateResultRenderer data={data as AggregateResultData} title={title} />;
     default:
       return null;
   }

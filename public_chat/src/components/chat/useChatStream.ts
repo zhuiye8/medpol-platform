@@ -11,7 +11,11 @@ import type {
   ToolCall,
 } from "./types";
 
-const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
+// 优先使用 public_chat 专用的 API 地址，回退到通用配置
+const DEFAULT_API_BASE =
+  import.meta.env.VITE_PUBLIC_CHAT_API_BASE ||
+  import.meta.env.VITE_API_BASE ||
+  "http://localhost:8000";
 
 function generateId(): string {
   return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
@@ -76,8 +80,14 @@ export function useChatStream(options: ChatOptions = {}) {
       }));
 
       try {
-        // Build URL - no token required for public chat
+        // 从 sessionStorage 读取访问码
+        const accessCode = sessionStorage.getItem("medpol_access_code");
+
+        // Build URL with token
         const url = new URL(`${apiBase}/v1/ai/chat/stream`);
+        if (accessCode) {
+          url.searchParams.set("token", accessCode);
+        }
 
         const response = await fetch(url.toString(), {
           method: "POST",

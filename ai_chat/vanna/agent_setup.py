@@ -46,7 +46,7 @@ def build_agent(
         user_resolver=user_resolver,
         agent_memory=build_agent_memory(),
         conversation_store=MemoryConversationStore(),
-        config=AgentConfig(stream_responses=stream, temperature=0.2, max_tool_iterations=8),
+        config=AgentConfig(stream_responses=stream, temperature=0.2, max_tool_iterations=5),
         system_prompt_builder=ModePromptBuilder(mode=mode, user_role=user_role),
     )
     return agent
