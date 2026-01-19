@@ -435,7 +435,31 @@ async def chat_stream(
             # 发送工具产生的待处理组件（搜索结果卡片、图表等）
             registry = getattr(agent, "tool_registry", None)
             if isinstance(registry, LoggingToolRegistry):
-                for comp in registry.pop_pending_components():
+                pending_comps = registry.pop_pending_components()
+                logger.info(f"🔍 [SSE Stream] Registry returned {len(pending_comps)} components")
+
+                # 🎯 组件排序：图表优先，表格延后
+                def component_priority(comp):
+                    """定义组件优先级：chart > search_results > dataframe"""
+                    priority_map = {
+                        "chart": 1,
+                        "search_results": 2,
+                        "dataframe": 3,
+                    }
+                    return priority_map.get(comp["type"], 99)
+
+                # 按优先级排序
+                sorted_comps = sorted(pending_comps, key=component_priority)
+
+                for comp in sorted_comps:
+                    logger.info(f"🔍 [SSE Stream] Sending component: type={comp['type']}, has_data={bool(comp.get('data'))}")
+                    # 如果是图表组件，打印更详细的信息
+                    if comp['type'] == 'chart':
+                        chart_config = comp.get('data', {}).get('config', {})
+                        plotly_data = chart_config.get('data', [])
+                        logger.info(f"🔍 [SSE Stream] Chart component: plotly_data_length={len(plotly_data)}")
+                        if plotly_data:
+                            logger.info(f"🔍 [SSE Stream] First trace keys: {list(plotly_data[0].keys())}")
                     yield _sse_line(_safe_json_dumps(
                         SSEComponentEvent(
                             component_type=comp["type"],

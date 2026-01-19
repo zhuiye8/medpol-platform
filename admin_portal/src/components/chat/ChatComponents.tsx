@@ -70,6 +70,9 @@ function exportToCsv(columns: string[], rows: Record<string, unknown>[], title?:
 export function DataFrameRenderer({ data, title }: DataFrameProps) {
   const { columns, rows, row_count, column_labels } = data;
 
+  // 🎯 折叠状态管理（默认折叠）
+  const [isExpanded, setIsExpanded] = useState(false);
+
   if (!columns || !rows || rows.length === 0) {
     return <div className="chat-empty">暂无数据</div>;
   }
@@ -85,43 +88,69 @@ export function DataFrameRenderer({ data, title }: DataFrameProps) {
 
   return (
     <div className="chat-card chat-dataframe">
-      <div className="chat-card__header">
-        <h4 className="chat-card__title">{title || "数据表"}</h4>
-        <div className="chat-card__actions">
+      {/* 🎯 折叠/展开按钮（整个标题区域可点击） */}
+      <button
+        className="chat-dataframe__toggle"
+        onClick={() => setIsExpanded(!isExpanded)}
+        type="button"
+      >
+        <span className="chat-dataframe__toggle-icon">
+          {isExpanded ? "▲" : "▼"}
+        </span>
+        <span className="chat-dataframe__toggle-title">
+          {title || "数据表"} ({row_count} 条记录)
+        </span>
+        <div className="chat-dataframe__actions">
+          {/* 导出按钮始终可见（即使折叠状态） */}
           <button
-            type="button"
+            onClick={(e) => {
+              e.stopPropagation(); // 阻止冒泡，避免触发展开
+              handleExport();
+            }}
             className="chat-dataframe__export-btn"
-            onClick={handleExport}
             title="导出 CSV"
+            type="button"
           >
             ⬇ 导出
           </button>
-          <span className="chat-chip">共 {row_count} 条</span>
         </div>
-      </div>
-      <div className="chat-dataframe__wrapper">
-        <table className="chat-dataframe__table">
-          <thead>
-            <tr>
-              {columns.map((col) => (
-                <th key={col}>{getColumnLabel(col)}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, i) => (
-              <tr key={i}>
-                {columns.map((col) => (
-                  <td key={col}>{formatCellValue(row[col])}</td>
+      </button>
+
+      {/* 🎯 条件渲染：只有展开时才显示表格 */}
+      {isExpanded && (
+        <>
+          <div className="chat-dataframe__wrapper">
+            <table className="chat-dataframe__table">
+              <thead>
+                <tr>
+                  {columns.map((col) => (
+                    <th key={col}>{getColumnLabel(col)}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, i) => (
+                  <tr key={i}>
+                    {columns.map((col) => (
+                      <td key={col}>{formatCellValue(row[col])}</td>
+                    ))}
+                  </tr>
                 ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p className="chat-dataframe__count">
-        {rows.length < row_count ? `显示 ${rows.length} / ${row_count} 条记录` : `共${row_count} 条记录`}
-      </p>
+              </tbody>
+            </table>
+          </div>
+          <p className="chat-dataframe__count">
+            {rows.length < row_count ? `显示 ${rows.length} / ${row_count} 条记录` : `共${row_count} 条记录`}
+          </p>
+        </>
+      )}
+
+      {/* 🎯 折叠状态下的数据摘要 */}
+      {!isExpanded && (
+        <p className="chat-dataframe__summary">
+          包含 {columns.length} 列数据 · 点击查看详情
+        </p>
+      )}
     </div>
   );
 }

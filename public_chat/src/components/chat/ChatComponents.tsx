@@ -6,7 +6,7 @@
  */
 import { useState, lazy, Suspense } from "react";
 import type { Data, Layout, Config } from "plotly.js";
-import type { DataFrameData, ChartData, SearchResult, SearchResultsData, AggregateResultData } from "./types";
+import type { DataFrameData, ChartData, SearchResult, SearchResultsData } from "./types";
 
 // Lazy load Plotly (about 3MB)
 const Plot = lazy(async () => {
@@ -63,6 +63,9 @@ function exportToCsv(columns: string[], rows: Record<string, unknown>[], title?:
 export function DataFrameRenderer({ data, title }: DataFrameProps) {
   const { columns, rows, row_count, column_labels } = data;
 
+  // 🎯 折叠状态管理（默认折叠）
+  const [isExpanded, setIsExpanded] = useState(false);
+
   // 🔧 截断逻辑（防止大数据量卡顿）
   const MAX_DISPLAY_ROWS = 500;
   const isTruncated = rows.length > MAX_DISPLAY_ROWS;
@@ -84,57 +87,82 @@ export function DataFrameRenderer({ data, title }: DataFrameProps) {
 
   return (
     <div className="chat-card chat-dataframe">
-      <div className="chat-card__header">
-        <h4 className="chat-card__title">{title || "数据表"}</h4>
-        <div className="chat-card__actions">
+      {/* 🎯 折叠/展开按钮（整个标题区域可点击） */}
+      <button
+        className="chat-dataframe__toggle"
+        onClick={() => setIsExpanded(!isExpanded)}
+        type="button"
+      >
+        <span className="chat-dataframe__toggle-icon">
+          {isExpanded ? "▲" : "▼"}
+        </span>
+        <span className="chat-dataframe__toggle-title">
+          {title || "数据表"} ({row_count} 条记录)
+        </span>
+        <div className="chat-dataframe__actions">
+          {/* 导出按钮始终可见（即使折叠状态） */}
           <button
-            type="button"
+            onClick={(e) => {
+              e.stopPropagation(); // 阻止冒泡，避免触发展开
+              handleExport();
+            }}
             className="chat-dataframe__export-btn"
-            onClick={handleExport}
             title="导出 CSV"
+            type="button"
           >
             ⬇ 导出
           </button>
-          <span className="chat-chip">共 {row_count} 条</span>
         </div>
-      </div>
+      </button>
 
-      {/* 🔧 截断警告 */}
-      {isTruncated && (
-        <div className="chat-warning">
-          ⚠ 数据量过大，仅显示前 {MAX_DISPLAY_ROWS} 条。
-          建议添加筛选条件（如公司名称、部门）以减少结果数量。
-          点击"导出"按钮可下载完整数据。
-        </div>
+      {/* 🎯 条件渲染：只有展开时才显示表格 */}
+      {isExpanded && (
+        <>
+          {/* 🔧 截断警告 */}
+          {isTruncated && (
+            <div className="chat-warning">
+              ⚠ 数据量过大，仅显示前 {MAX_DISPLAY_ROWS} 条。
+              建议添加筛选条件（如公司名称、部门）以减少结果数量。
+              点击"导出"按钮可下载完整数据。
+            </div>
+          )}
+
+          <div className="chat-dataframe__wrapper">
+            <table className="chat-dataframe__table">
+              <thead>
+                <tr>
+                  {columns.map((col) => (
+                    <th key={col}>{getColumnLabel(col)}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {displayRows.map((row, i) => (
+                  <tr key={i}>
+                    {columns.map((col) => (
+                      <td key={col}>{formatCellValue(row[col])}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="chat-dataframe__count">
+            {isTruncated
+              ? `显示 ${displayRows.length} / ${rows.length} 条（已截断）`
+              : rows.length < row_count
+                ? `显示 ${rows.length} / ${row_count} 条记录`
+                : `共 ${row_count} 条记录`}
+          </p>
+        </>
       )}
 
-      <div className="chat-dataframe__wrapper">
-        <table className="chat-dataframe__table">
-          <thead>
-            <tr>
-              {columns.map((col) => (
-                <th key={col}>{getColumnLabel(col)}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {displayRows.map((row, i) => (
-              <tr key={i}>
-                {columns.map((col) => (
-                  <td key={col}>{formatCellValue(row[col])}</td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p className="chat-dataframe__count">
-        {isTruncated
-          ? `显示 ${displayRows.length} / ${rows.length} 条（已截断）`
-          : rows.length < row_count
-            ? `显示 ${rows.length} / ${row_count} 条记录`
-            : `共 ${row_count} 条记录`}
-      </p>
+      {/* 🎯 折叠状态下的数据摘要 */}
+      {!isExpanded && (
+        <p className="chat-dataframe__summary">
+          包含 {columns.length} 列数据 · 点击查看详情
+        </p>
+      )}
     </div>
   );
 }
@@ -396,47 +424,11 @@ function SearchResultItem({ result, onViewArticle }: SearchResultItemProps) {
   );
 }
 
-// ======================== AggregateResultRenderer ========================
-
-interface AggregateResultProps {
-  data: AggregateResultData;
-  title?: string;
-}
-
-export function AggregateResultRenderer({ data, title }: AggregateResultProps) {
-  const formatValue = (value: number | string, format?: string): string => {
-    if (typeof value === "number") {
-      if (format === "percent") {
-        return `${value.toFixed(2)}%`;
-      }
-      if (format === "currency") {
-        return `¥${value.toLocaleString("zh-CN", { minimumFractionDigits: 2 })}`;
-      }
-      return value.toLocaleString("zh-CN");
-    }
-    return String(value);
-  };
-
-  return (
-    <div className="chat-card chat-aggregate">
-      <div className="chat-card__header">
-        <h4 className="chat-card__title">{title || "统计结果"}</h4>
-      </div>
-      <div className="chat-aggregate__content">
-        <div className="chat-aggregate__value">
-          {formatValue(data.value, data.format)}
-        </div>
-        <div className="chat-aggregate__label">{data.label}</div>
-      </div>
-    </div>
-  );
-}
-
 // ======================== Component Router ========================
 
 interface ChatComponentRendererProps {
-  type: "dataframe" | "chart" | "search_results" | "aggregate_result";
-  data: DataFrameData | ChartData | SearchResultsData | AggregateResultData;
+  type: "dataframe" | "chart" | "search_results";
+  data: DataFrameData | ChartData | SearchResultsData;
   title?: string;
   onViewArticle?: (articleId: string) => void;
 }
@@ -449,8 +441,6 @@ export function ChatComponentRenderer({ type, data, title, onViewArticle }: Chat
       return <ChartRenderer data={data as ChartData} title={title} />;
     case "search_results":
       return <SearchResultsRenderer data={data as SearchResultsData} onViewArticle={onViewArticle} />;
-    case "aggregate_result":
-      return <AggregateResultRenderer data={data as AggregateResultData} title={title} />;
     default:
       return null;
   }

@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List
 
 from vanna.core.registry import ToolRegistry
 from vanna.core.tool import ToolCall, ToolContext, ToolResult
+
+logger = logging.getLogger(__name__)
 
 
 # 允许暴露给前端的参数白名单
@@ -49,7 +52,13 @@ class LoggingToolRegistry(ToolRegistry):
         if result.metadata:
             if "charts" in result.metadata:
                 # 多图表模式
-                for chart in result.metadata["charts"]:
+                charts = result.metadata["charts"]
+                logger.info(f"🔍 [Registry] Detected 'charts' in metadata, count={len(charts)}")
+                for i, chart in enumerate(charts):
+                    logger.info(f"🔍 [Registry] Chart {i}: has_config={bool(chart.get('config'))}, chart_type={chart.get('chart_type')}")
+                    if chart.get('config'):
+                        plotly_data = chart['config'].get('data', [])
+                        logger.info(f"🔍 [Registry] Chart {i} plotly data length: {len(plotly_data)}")
                     self._pending_components.append({
                         "type": "chart",
                         "data": chart,
@@ -57,6 +66,7 @@ class LoggingToolRegistry(ToolRegistry):
                     })
             elif "chart" in result.metadata:
                 # 向后兼容单图表模式
+                logger.info(f"🔍 [Registry] Detected single 'chart' in metadata")
                 self._pending_components.append({
                     "type": "chart",
                     "data": result.metadata["chart"],
@@ -64,24 +74,27 @@ class LoggingToolRegistry(ToolRegistry):
                 })
 
         # 🔧 检测聚合结果（COUNT/SUM/AVG等统计查询）
-        if result.metadata and result.metadata.get("is_aggregate"):
-            agg_data = result.metadata.get("aggregate_result")
-            if agg_data:
-                self._pending_components.append({
-                    "type": "aggregate_result",
-                    "data": {
-                        "label": agg_data["label"],
-                        "value": agg_data["value"],
-                        "format": "number",  # 可扩展：percent, currency等
-                    },
-                    "title": "统计结果",
-                })
+        # 注释掉紫色卡片展示，改为只在文字回复中提及统计结果
+        # if result.metadata and result.metadata.get("is_aggregate"):
+        #     agg_data = result.metadata.get("aggregate_result")
+        #     if agg_data:
+        #         self._pending_components.append({
+        #             "type": "aggregate_result",
+        #             "data": {
+        #                 "label": agg_data["label"],
+        #                 "value": agg_data["value"],
+        #                 "format": "number",  # 可扩展：percent, currency等
+        #             },
+        #             "title": "统计结果",
+        #         })
 
         # 检测 DataFrame 数据（员工查询结果等）
-        elif result.metadata:
+        if result.metadata:
             results = result.metadata.get("results")
             columns = result.metadata.get("columns")
             if results is not None and columns is not None:
+                logger.info(f"🔍 [Registry] Detected DataFrame: rows={len(results)}, columns={columns}")
+                logger.info(f"🔍 [Registry] DataFrame has is_aggregate={result.metadata.get('is_aggregate')}")
                 self._pending_components.append({
                     "type": "dataframe",
                     "data": {

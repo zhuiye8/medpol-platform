@@ -645,6 +645,79 @@
   font-size: 13px;
 }
 
+/* ========== DataFrame 折叠样式 ========== */
+
+.chat-dataframe__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: var(--bg-primary, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  padding: 14px 16px;
+  border-radius: var(--radius-md, 10px);
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.15s ease);
+  text-align: left;
+  font-family: inherit;
+}
+
+.chat-dataframe__toggle:hover {
+  background: var(--bg-hover, #f8fafc);
+  border-color: var(--border-hover, #cbd5e1);
+}
+
+.chat-dataframe__toggle-icon {
+  display: inline-block;
+  margin-right: 10px;
+  color: var(--text-secondary, #64748b);
+  font-size: 14px;
+  transition: transform 0.25s ease;
+}
+
+.chat-dataframe__toggle-title {
+  flex: 1;
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--text-primary, #0f172a);
+}
+
+.chat-dataframe__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* 折叠状态下的摘要 */
+.chat-dataframe__summary {
+  padding: 12px 16px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary, #64748b);
+  background: var(--bg-secondary, #f8fafc);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-top: none;
+  border-radius: 0 0 var(--radius-md, 10px) var(--radius-md, 10px);
+}
+
+/* 导出按钮（在折叠标题中） */
+.chat-dataframe__export-btn {
+  padding: 6px 12px;
+  font-size: 13px;
+  background: var(--bg-primary, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: var(--text-primary, #0f172a);
+}
+
+.chat-dataframe__export-btn:hover {
+  background: var(--bg-hover, #f1f5f9);
+  border-color: var(--border-hover, #cbd5e1);
+}
+
 /* Warning message (data truncation, etc.) */
 .chat-warning {
   padding: 12px 16px;
@@ -1407,59 +1480,6 @@
 
   .medpol-chat__message {
     gap: 8px;
-  }
-}
-
-/* ======================== Aggregate Result Card ======================== */
-.chat-aggregate {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
-.chat-aggregate:hover {
-  border: none;
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
-}
-
-.chat-aggregate .chat-card__title {
-  color: white;
-}
-
-.chat-aggregate__content {
-  padding: 32px 24px;
-  text-align: center;
-}
-
-.chat-aggregate__value {
-  font-size: 48px;
-  font-weight: 700;
-  line-height: 1.2;
-  margin-bottom: 12px;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.chat-aggregate__label {
-  font-size: 16px;
-  font-weight: 500;
-  opacity: 0.9;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-/* Responsive adjustments for aggregate card */
-@media (max-width: 768px) {
-  .chat-aggregate__content {
-    padding: 24px 16px;
-  }
-
-  .chat-aggregate__value {
-    font-size: 36px;
-  }
-
-  .chat-aggregate__label {
-    font-size: 14px;
   }
 }
 

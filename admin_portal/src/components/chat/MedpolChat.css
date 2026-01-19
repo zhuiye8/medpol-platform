@@ -687,8 +687,9 @@
 .chat-dataframe__wrapper {
   width: 100%;
   overflow-x: auto;
-  border-radius: 10px;
+  border-radius: 0 0 10px 10px;
   border: 1px solid #e2e8f0;
+  border-top: none;
 }
 
 .chat-dataframe__table {
@@ -745,6 +746,81 @@
   margin: 6px 0 0;
   color: #475569;
   font-size: 12px;
+}
+
+/* ========== DataFrame 折叠样式（参考 SearchResults） ========== */
+
+.chat-dataframe__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: var(--bg-primary, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  padding: 14px 16px;
+  border-radius: var(--radius-md, 10px);
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.15s ease);
+  text-align: left;
+  font-family: inherit;
+}
+
+.chat-dataframe__toggle:hover {
+  background: var(--bg-hover, #f8fafc);
+  border-color: var(--border-hover, #cbd5e1);
+}
+
+.chat-dataframe__toggle-icon {
+  display: inline-block;
+  margin-right: 10px;
+  color: var(--text-secondary, #64748b);
+  font-size: 14px;
+  transition: transform 0.25s ease;
+}
+
+.chat-dataframe__toggle-title {
+  flex: 1;
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--text-primary, #0f172a);
+}
+
+.chat-dataframe__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* 折叠状态下的摘要 */
+.chat-dataframe__summary {
+  padding: 12px 16px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary, #64748b);
+  background: var(--bg-secondary, #f8fafc);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-top: none;
+  border-radius: 0 0 var(--radius-md, 10px) var(--radius-md, 10px);
+}
+
+/* 导出按钮（在折叠标题中） */
+.chat-dataframe__export-btn {
+  padding: 6px 12px;
+  font-size: 13px;
+  background: var(--bg-primary, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.15s ease);
+  color: var(--text-primary, #0f172a);
+  font-family: inherit;
+}
+
+.chat-dataframe__export-btn:hover {
+  background: var(--primary-color, #3b82f6);
+  color: white;
+  border-color: var(--primary-color, #3b82f6);
 }
 
 .chat-chart {

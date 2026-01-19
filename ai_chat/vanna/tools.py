@@ -190,10 +190,12 @@ class FinanceChartTool(Tool[ChartArgs]):
         if results and columns:
             # 使用结构化数据
             chart_data = {"headers": columns, "rows": results}
+            logger.info(f"🔍 [FinanceChart] Using structured data: columns={columns}, row_count={len(results)}")
         else:
             # 回退到解析 CSV 文本（兼容旧版本）
             result_text = last_sql.get("result_for_llm", "")
             chart_data = self._parse_sql_result(result_text)
+            logger.info(f"🔍 [FinanceChart] Parsed CSV data: {chart_data}")
 
         if not chart_data:
             return ToolResult(success=False, error="无法解析财务数据，请重新查询")
@@ -269,6 +271,7 @@ class FinanceChartTool(Tool[ChartArgs]):
         """
         headers = data["headers"]
         rows = data["rows"]
+        logger.info(f"🔍 [FinanceChart] _build_plotly_config called: chart_type={chart_type}, headers={headers}, row_count={len(rows)}")
 
         # Plotly 配色方案（扩展到支持更多系列）
         colors = [
@@ -292,6 +295,7 @@ class FinanceChartTool(Tool[ChartArgs]):
             exclude = {"company_name", "company_no", "keep_date", "type_name", "type_no"}
             value_cols = [h for h in headers if h not in exclude][:2]
 
+        logger.info(f"🔍 [FinanceChart] Identified value_cols: {value_cols}")
         val_col = value_cols[0] if value_cols else headers[-1]
 
         # 2. 饼图特殊处理
@@ -323,10 +327,20 @@ class FinanceChartTool(Tool[ChartArgs]):
             x_col = headers[0] if headers else None
 
         # 4. 构建 traces
+        logger.info(f"🔍 [FinanceChart] Strategy: group_col={group_col}, x_col={x_col}, value_cols={value_cols}")
         if group_col:
-            traces = self._build_grouped_traces(rows, group_col, x_col, val_col, chart_type, colors)
+            # 验证分组列是否有有效值（非None/空字符串）
+            valid_groups = [row.get(group_col) for row in rows if row.get(group_col)]
+            if valid_groups:
+                traces = self._build_grouped_traces(rows, group_col, x_col, val_col, chart_type, colors)
+            else:
+                # 分组列全是None，降级为单系列展示
+                logger.info(f"🔍 [FinanceChart] Group column '{group_col}' has no valid values, falling back to single trace")
+                group_col = None
+                traces = self._build_single_traces(rows, x_col, value_cols, chart_type, colors)
         else:
             traces = self._build_single_traces(rows, x_col, value_cols, chart_type, colors)
+        logger.info(f"🔍 [FinanceChart] Generated {len(traces)} traces")
 
         # 5. 智能布局配置
         series_count = len(traces)
@@ -414,13 +428,19 @@ class FinanceChartTool(Tool[ChartArgs]):
 
     def _build_grouped_traces(self, rows, group_col, x_col, val_col, chart_type, colors):
         """按分组列构建多系列 traces（多公司/多指标）。"""
+        logger.info(f"🔍 [FinanceChart] _build_grouped_traces: group_col={group_col}, x_col={x_col}, val_col={val_col}, row_count={len(rows)}")
+        if rows:
+            logger.info(f"🔍 [FinanceChart] First row type: {type(rows[0])}, first row: {rows[0]}")
         # 获取所有分组
         groups = sorted(set(str(row.get(group_col, "")) for row in rows if row.get(group_col)))
+        logger.info(f"🔍 [FinanceChart] Found {len(groups)} groups: {groups}")
 
         traces = []
         for i, group in enumerate(groups):
+            logger.info(f"🔍 [FinanceChart] Processing group {i}: '{group}'")
             # 筛选该分组的数据
             group_rows = [r for r in rows if str(r.get(group_col, "")) == group]
+            logger.info(f"🔍 [FinanceChart] Group '{group}' has {len(group_rows)} rows")
             # 按X轴排序
             group_rows.sort(key=lambda r: str(r.get(x_col, "")))
 
@@ -454,12 +474,15 @@ class FinanceChartTool(Tool[ChartArgs]):
                 trace["mode"] = "lines+markers"
                 trace["line"] = {"shape": "spline", "smoothing": 1.3}
 
+            logger.info(f"🔍 [FinanceChart] Created trace for group '{group}': x_len={len(x_data)}, y_len={len(y_data)}")
             traces.append(trace)
 
+        logger.info(f"🔍 [FinanceChart] _build_grouped_traces returning {len(traces)} traces")
         return traces
 
     def _build_single_traces(self, rows, x_col, value_cols, chart_type, colors):
         """构建单系列或按数值列分组的 traces。"""
+        logger.info(f"🔍 [FinanceChart] _build_single_traces: x_col={x_col}, value_cols={value_cols}, row_count={len(rows)}")
         # 提取 X 轴数据
         x_data = []
         for row in rows:
@@ -475,6 +498,7 @@ class FinanceChartTool(Tool[ChartArgs]):
             x_data.append(val)
 
         traces = []
+        logger.info(f"🔍 [FinanceChart] Starting trace generation loop, value_cols count={len(value_cols)}")
         for i, col in enumerate(value_cols):
             display_name = _get_display_name(col)
             y_data = []
